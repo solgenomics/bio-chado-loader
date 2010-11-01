@@ -19,6 +19,8 @@ my $build = Module::Build->new(
     },
     requires       => {
         'Moose'              => '1.0',
+        'MooseX::Runnable'   => 0,
+        'MooseX::Getopt'     => 0,
         'perl'               => '5.10.0',
         'Carp'               => 0,
         'Bio::Chado::Schema' => '0.06001',
