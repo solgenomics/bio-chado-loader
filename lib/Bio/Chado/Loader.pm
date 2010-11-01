@@ -1,12 +1,38 @@
 package Bio::Chado::Loader;
 
-use warnings;
-use strict;
 use Bio::Chado::Schema;
+use Moose::Role;
+
+has dbhost => (
+    is      => 'ro',
+    default => 'localhost',
+    isa     => 'Str',
+);
+has dbuser => (
+    is      => 'ro',
+    default => 'postgres',
+    isa     => 'Str',
+);
+has dbpass => (
+    is      => 'ro',
+    isa     => 'Str',
+    default => '',
+);
+has dbname => (
+    is      => 'ro',
+    default => 'cxgn',
+    isa     => 'Str',
+);
+has organism => (
+    is      => 'ro',
+    default => 'tomato',
+    isa     => 'Str',
+);
+
 
 =head1 NAME
 
-Bio::Chado::Loader - The great new Bio::Chado::Loader!
+Bio::Chado::Loader - Base role for Chado Loaders
 
 =head1 VERSION
 
