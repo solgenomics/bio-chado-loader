@@ -13,13 +13,14 @@ sub TEST_IS_PRAGMA : Test(4) {
     ok(!$loader->is_pragma_line(''),'is_pragma_line');
 }
 
-sub TEST_ITAG1_GENOMIC_REF : Test(2) {
+sub TEST_ITAG1_GENOMIC_REF : Test(3) {
     my $loader = Bio::Chado::Loader::GFF3->new(
         filename => "t/data/ITAG1_genomic_ref_sample.gff3",
     );
     isa_ok($loader, 'Bio::Chado::Loader::GFF3');
     $loader->parse();
     is($loader->count_cvterms, 2, 'found 2 unique cvterms');
+    is($loader->count_features, 4, 'found 4 unique features');
 
 }
 

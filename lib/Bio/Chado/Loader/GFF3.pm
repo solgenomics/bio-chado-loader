@@ -9,6 +9,17 @@ has schema => (
     isa => 'Bio::Chado::Schema',
 );
 
+has features => (
+    is      => 'rw',
+    isa     => 'HashRef[Str]',
+    traits  => [ 'Hash' ],
+    default => sub { { } },
+    handles => {
+        add_feature    => 'set',
+        count_features => 'count',
+    },
+);
+
 with 'Bio::Chado::Loader';
 
 use autodie qw(:all);
@@ -36,6 +47,7 @@ sub parse_line {
     my @fields = split /\t/, $line;
 
     $self->add_cvterm( $fields[2] => 1 );
+    $self->add_feature( $fields[0] => 1 );
 }
 
 sub is_pragma_line {
