@@ -14,4 +14,9 @@ sub run {
     exit 0;
 }
 
+sub is_pragma_line {
+    my ($self, $line) = @_;
+    return $line =~ m/^##/ ? 1 : 0;
+}
+
 1;
