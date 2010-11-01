@@ -40,6 +40,11 @@ has is_analysis => (
     default => 0,
 );
 
+has cvterms => (
+    is      => 'rw',
+    isa     => 'Array',
+);
+
 
 =head1 NAME
 

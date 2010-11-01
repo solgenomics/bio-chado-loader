@@ -14,6 +14,11 @@ sub run {
     exit 0;
 }
 
+sub parse {
+    my ($self, %args) = @_;
+
+}
+
 sub is_pragma_line {
     my ($self, $line) = @_;
     return $line =~ m/^##/ ? 1 : 0;

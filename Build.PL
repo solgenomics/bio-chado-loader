@@ -15,16 +15,18 @@ my $build = Module::Build->new(
           },
     },
     build_requires => {
-        'Test::Most'   => 0,
+        'Test::Class::Most'   => 0,
     },
     requires       => {
-        'Moose'              => '1.0',
-        'MooseX::Runnable'   => 0,
-        'MooseX::Getopt'     => 0,
-        'perl'               => '5.10.0',
-        'Carp'               => 0,
-        'Bio::Chado::Schema' => '0.06001',
-        'Try::Tiny'          => 0,
+        'autodie'             => 0,
+        'IPC::System::Simple' => 0, # for autodie qw/:all/
+        'Moose'               => '1.0',
+        'MooseX::Runnable'    => 0,
+        'MooseX::Getopt'      => 0,
+        'perl'                => '5.10.0',
+        'Carp'                => 0,
+        'Bio::Chado::Schema'  => '0.06001',
+        'Try::Tiny'           => 0,
     },
 );
 $build->create_build_script;
