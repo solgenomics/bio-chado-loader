@@ -20,13 +20,24 @@ has dbpass => (
 );
 has dbname => (
     is      => 'ro',
-    default => 'cxgn',
+    default => 'chado',
     isa     => 'Str',
 );
 has organism => (
     is      => 'ro',
     default => 'tomato',
     isa     => 'Str',
+);
+
+has filename => (
+    is      => 'ro',
+    isa     => 'Str',
+);
+
+has is_analysis => (
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0,
 );
 
 
