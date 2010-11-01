@@ -3,6 +3,12 @@ package Bio::Chado::Loader::GFF3;
 use Moose;
 with 'MooseX::Runnable';
 with 'MooseX::Getopt';
+
+has schema => (
+    is  => 'rw',
+    isa => 'Bio::Chado::Schema',
+);
+
 with 'Bio::Chado::Loader';
 
 use autodie qw(:all);

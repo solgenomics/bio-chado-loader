@@ -51,6 +51,7 @@ has cvterms => (
     },
 );
 
+requires 'schema';
 
 =head1 NAME
 
