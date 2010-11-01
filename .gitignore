@@ -1,0 +1,9 @@
+*~
+#*#
+.#*
+blib/*
+\.*sw[op]
+_build
+Build
+MYMETA.yml
+t/var/*

@@ -1,0 +1,42 @@
+Bio::Chado::Loader
+
+Load data with Bio::Chado::Schema into the Chado database
+
+INSTALLATION
+
+To install this module, run the following commands:
+
+	perl Build.PL
+	./Build
+	./Build test
+	./Build install
+
+SUPPORT AND DOCUMENTATION
+
+After installing, you can find documentation for this module with the
+perldoc command.
+
+    perldoc Bio::Chado::Loader
+
+You can also look for information at:
+
+    RT, CPAN's request tracker
+        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Bio::Chado::Loader
+
+    AnnoCPAN, Annotated CPAN documentation
+        http://annocpan.org/dist/Bio::Chado::Loader
+
+    CPAN Ratings
+        http://cpanratings.perl.org/d/Bio::Chado::Loader
+
+    Search CPAN
+        http://search.cpan.org/dist/Bio::Chado::Loader
+
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2010 Jonathan "Duke" Leto
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
