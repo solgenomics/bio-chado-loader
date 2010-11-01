@@ -42,7 +42,13 @@ has is_analysis => (
 
 has cvterms => (
     is      => 'rw',
-    isa     => 'Array',
+    isa     => 'HashRef[Str]',
+    traits  => [ 'Hash' ],
+    default => sub { { } },
+    handles => {
+        add_cvterm    => 'set',
+        count_cvterms => 'count',
+    },
 );
 
 
