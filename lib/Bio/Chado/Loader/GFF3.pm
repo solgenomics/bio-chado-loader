@@ -37,4 +37,19 @@ sub is_pragma_line {
     return $line =~ m/^##/ ? 1 : 0;
 }
 
+=head1 NAME
+
+Bio::Chado::Loader::GFF3 - Load GFF3 files into the Chado database schema
+
+=head1 SYNOPSIS
+
+  use Bio::Chado::Loader;
+
+
+=head1 DESCRIPTION
+
+The GFF3 spec is available online at L<http://www.sequenceontology.org/gff3.shtml>
+
+=cut
+
 1;
