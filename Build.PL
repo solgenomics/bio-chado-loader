@@ -18,6 +18,7 @@ my $build = Module::Build->new(
         'Test::Most'   => 0,
     },
     requires       => {
+        'Moose'              => '1.0',
         'perl'               => '5.10.0',
         'Carp'               => 0,
         'Bio::Chado::Schema' => '0.06001',
