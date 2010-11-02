@@ -3,6 +3,7 @@ package Test::Bio::Chado::Loader::GFF3;
 
 use Test::Class::Most;
 use Bio::Chado::Loader::GFF3;
+#use Carp::Always;
 
 sub TEST_IS_PRAGMA : Test(4) {
     my $loader = Bio::Chado::Loader::GFF3->new;
@@ -41,7 +42,14 @@ sub TEST_CANONICAL_GENE : Tests {
         CDS TF_binding_site exon gene mRNA/ ],
         'Found expected cvterms',
     );
+}
 
+sub TEST_UNKNOWN_PARENT : Tests {
+    my $loader = Bio::Chado::Loader::GFF3->new(
+        filename => "t/data/unknown_parent.gff3",
+    );
+    dies_ok sub { $loader->parse() }, qr/Bobby_Tables is an unknown Parent/;
 }
 
 __PACKAGE__->runtests;
+

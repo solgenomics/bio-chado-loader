@@ -17,6 +17,7 @@ has features => (
     handles => {
         add_feature    => 'set',
         count_features => 'count',
+        feature_exists => 'exists',
     },
 );
 
@@ -71,7 +72,20 @@ sub parse_line {
     my $attribs = { map { split /=/, $_  }  split /;/, $fields[ATTRIBUTES] };
 
     $self->add_cvterm( $fields[TYPE]   => 1 );
-    $self->add_feature( $attribs->{ID} => 1 );
+    $self->add_feature( $attribs->{ID} || $fields[SEQID] => 1 );
+
+    $self->_validate_parents($attribs);
+}
+
+sub _validate_parents {
+    my ($self, $attribs) = @_;
+    return unless $attribs->{Parent};
+    my (@parents) = split /,/, $attribs->{Parent};
+    for my $p (@parents) {
+        unless ( $self->feature_exists( $p ) ) {
+            die "$p is an unknown Parent!";
+        }
+    }
 }
 
 sub is_pragma_line {
