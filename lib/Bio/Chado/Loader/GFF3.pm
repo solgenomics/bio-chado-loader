@@ -20,6 +20,17 @@ has features => (
     },
 );
 
+has cvterms => (
+    is      => 'rw',
+    isa     => 'HashRef[Str]',
+    traits  => [ 'Hash' ],
+    default => sub { { } },
+    handles => {
+        add_cvterm    => 'set',
+        count_cvterms => 'count',
+    },
+);
+
 use constant SEQID         => 0;
 use constant SOURCE        => 1;
 use constant TYPE          => 2;

@@ -40,17 +40,6 @@ has is_analysis => (
     default => 0,
 );
 
-has cvterms => (
-    is      => 'rw',
-    isa     => 'HashRef[Str]',
-    traits  => [ 'Hash' ],
-    default => sub { { } },
-    handles => {
-        add_cvterm    => 'set',
-        count_cvterms => 'count',
-    },
-);
-
 requires 'schema';
 
 =head1 NAME
