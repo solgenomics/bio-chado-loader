@@ -21,7 +21,6 @@ sub TEST_ITAG1_GENOMIC_REF : Test(3) {
     $loader->parse();
     is($loader->count_cvterms, 2, 'found 2 unique cvterms');
     is($loader->count_features, 4, 'found 4 unique features');
-
 }
 
 __PACKAGE__->runtests;

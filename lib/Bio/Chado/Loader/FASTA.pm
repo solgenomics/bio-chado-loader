@@ -21,14 +21,11 @@ has features => (
 
 with 'Bio::Chado::Loader';
 
-use autodie qw(:all);
-use Data::Dumper;
-use 5.010;
-
 sub run {
-    my ($self, %args) = @_;
-
     exit 0;
 }
 
+use autodie qw(:all);
+use Data::Dumper;
+use 5.010;
 1;

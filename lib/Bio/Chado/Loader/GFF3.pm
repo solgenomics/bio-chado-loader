@@ -20,6 +20,16 @@ has features => (
     },
 );
 
+use constant SEQID         => 0;
+use constant SOURCE        => 1;
+use constant TYPE          => 2;
+use constant FEATURE_START => 3;
+use constant FEATURE_END   => 4;
+use constant SCORE         => 5;
+use constant STRAND        => 6;
+use constant PHASE         => 7;
+use constant ATRRIBUTES    => 8;
+
 with 'Bio::Chado::Loader';
 
 use autodie qw(:all);
@@ -46,8 +56,8 @@ sub parse_line {
     my ($self, $line) = @_;
     my @fields = split /\t/, $line;
 
-    $self->add_cvterm( $fields[2] => 1 );
-    $self->add_feature( $fields[0] => 1 );
+    $self->add_cvterm( $fields[TYPE] => 1 );
+    $self->add_feature( $fields[SEQID] => 1 );
 }
 
 sub is_pragma_line {
