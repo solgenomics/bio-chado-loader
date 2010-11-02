@@ -31,6 +31,17 @@ sub TEST_CANONICAL_GENE : Tests {
     is($loader->count_cvterms, 5, 'found 5 unique cvterms');
     is($loader->count_features, 14, 'found 14 unique features');
 
+    cmp_set( [ keys %{$loader->features} ], [ qw/
+        cds00001 cds00002 cds00003 cds00004
+        exon00001 exon00002 exon00003 exon00004 exon00005
+        gene00001 mRNA00001 mRNA00002 mRNA00003 tfbs00001/ ],
+        'Found expected features',
+    );
+    cmp_set( [ keys %{$loader->cvterms} ], [ qw/
+        CDS TF_binding_site exon gene mRNA/ ],
+        'Found expected cvterms',
+    );
+
 }
 
 __PACKAGE__->runtests;
