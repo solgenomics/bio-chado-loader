@@ -23,4 +23,14 @@ sub TEST_ITAG1_GENOMIC_REF : Test(3) {
     is($loader->count_features, 4, 'found 4 unique features');
 }
 
+sub TEST_CANONICAL_GENE : Tests {
+    my $loader = Bio::Chado::Loader::GFF3->new(
+        filename => "t/data/canonical_gene.gff3",
+    );
+    $loader->parse();
+    is($loader->count_cvterms, 5, 'found 5 unique cvterms');
+    is($loader->count_features, 14, 'found 14 unique features');
+
+}
+
 __PACKAGE__->runtests;

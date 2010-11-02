@@ -28,7 +28,7 @@ use constant FEATURE_END   => 4;
 use constant SCORE         => 5;
 use constant STRAND        => 6;
 use constant PHASE         => 7;
-use constant ATRRIBUTES    => 8;
+use constant ATTRIBUTES    => 8;
 
 with 'Bio::Chado::Loader';
 
@@ -46,18 +46,21 @@ sub parse {
     my ($self, %args) = @_;
     open my $fh, "<", $self->filename;
     while( my $line = <$fh> ) {
+        next if $line =~ m/^\s*$/;
+        chomp $line;
         next if $self->is_pragma_line($line);
         $self->parse_line($line);
     }
-    #warn Dumper [ $self->cvterms ];
+    #warn Dumper [ $self->features ];
 }
 
 sub parse_line {
     my ($self, $line) = @_;
     my @fields = split /\t/, $line;
+    my $attribs = { map { split /=/, $_  }  split /;/, $fields[ATTRIBUTES] };
 
-    $self->add_cvterm( $fields[TYPE] => 1 );
-    $self->add_feature( $fields[SEQID] => 1 );
+    $self->add_cvterm( $fields[TYPE]   => 1 );
+    $self->add_feature( $attribs->{ID} => 1 );
 }
 
 sub is_pragma_line {
