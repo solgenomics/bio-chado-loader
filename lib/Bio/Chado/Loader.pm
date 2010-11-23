@@ -4,29 +4,40 @@ use Moose::Role;
 use Bio::Chado::Schema;
 
 has db_dsn => (
+    documentation => 'DBI dsn for our database',
+
     is      => 'ro',
     default => 'chado',
     isa     => 'Str',
 );
 
 has db_user => (
+    documentation => 'database username',
+
     is      => 'ro',
     default => 'postgres',
     isa     => 'Str',
 );
 
 has db_pass => (
+    documentation => 'database password',
+
     is      => 'ro',
     isa     => 'Str',
 );
 
 has db_attrs => (
+    documentation => 'hashref of DBI database attributes',
+
     is      => 'ro',
     isa     => 'HashRef',
     default => sub { +{} },
 );
 
 has organism_name => (
+    documentation => <<'',
+genus and species of organism, exactly as it appears in the database, e.g. "Solanum _ lycopersicum var. cerasiforme"
+
     is       => 'ro',
     isa      => 'Str',
 );
@@ -57,7 +68,6 @@ sub _build_schema {
         $self->db_attrs,
        );
 }
-
 
 =head1 NAME
 
