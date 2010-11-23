@@ -48,6 +48,15 @@ use autodie qw(:all);
 use Data::Dumper;
 use 5.010;
 
+has is_analysis => (
+    documentation => <<'',
+set true if this feature should be recorded as from an analysis
+
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0,
+);
+
 sub run {
     my ($self, %args) = @_;
 
