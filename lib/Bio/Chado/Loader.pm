@@ -1,32 +1,34 @@
 package Bio::Chado::Loader;
-
-use Bio::Chado::Schema;
 use Moose::Role;
 
-has dbhost => (
-    is      => 'ro',
-    default => 'localhost',
-    isa     => 'Str',
-);
-has dbuser => (
-    is      => 'ro',
-    default => 'postgres',
-    isa     => 'Str',
-);
-has dbpass => (
-    is      => 'ro',
-    isa     => 'Str',
-    default => '',
-);
-has dbname => (
+use Bio::Chado::Schema;
+
+has db_dsn => (
     is      => 'ro',
     default => 'chado',
     isa     => 'Str',
 );
-has organism => (
+
+has db_user => (
     is      => 'ro',
-    default => 'tomato',
+    default => 'postgres',
     isa     => 'Str',
+);
+
+has db_pass => (
+    is      => 'ro',
+    isa     => 'Str',
+);
+
+has db_attrs => (
+    is      => 'ro',
+    isa     => 'HashRef',
+    default => sub { +{} },
+);
+
+has organism_name => (
+    is       => 'ro',
+    isa      => 'Str',
 );
 
 has filename => (
@@ -41,6 +43,21 @@ has is_analysis => (
 );
 
 requires 'schema';
+
+# default _build_schema just connects with the db args.  consuming
+# classes can use this if they just set lazy_build => 1 on their
+# schema attrs
+sub _build_schema {
+    my ( $self ) = @_;
+
+    return Bio::Chado::Schema->connect(
+        $self->db_dsn,
+        $self->db_user,
+        $self->db_pass,
+        $self->db_attrs,
+       );
+}
+
 
 =head1 NAME
 
@@ -68,9 +85,6 @@ Jonathan Duke Leto, C<< <jonathan at leto.net> >>
 Please report any bugs or feature requests to C<bug-bio-chado-loader at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Bio::Chado::Loader>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
-
-
-
 
 =head1 SUPPORT
 
