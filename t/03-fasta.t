@@ -7,14 +7,14 @@ my @test_fasta = qw( t/data/test1.fasta t/data/test2.fasta );
 
 sub TEST_FASTA_SPOOLING : Test(1) {
     my $self = shift;
-    my $loader = Bio::Chado::Loader::FASTA->new;
+    my $loader = $self->_test_loader;
     my $s = $loader->fasta_stream( \@test_fasta );
     is( $self->_count_stream( $s ), 4, 'got 4 seqs from the seq stream' );
 }
 
 sub TEST_FASTA_PARSE : Test(3) {
     my $self = shift;
-    my $loader = Bio::Chado::Loader::FASTA->new;
+    my $loader = $self->_test_loader;
     my $seq = "foo234.12_X|27  bar bal bas[1]\r\nAATCGATCGATCG\nATCGTACGATCAG AGTAGCT\n";
     my ( $id, $dl ) = $loader->parse_fasta( \$seq );
     is( $id,  'foo234.12_X|27', 'right ID' );
@@ -22,9 +22,9 @@ sub TEST_FASTA_PARSE : Test(3) {
     is( $seq, 'AATCGATCGATCGATCGTACGATCAGAGTAGCT', 'right sequence' );
 }
 
-sub TEST_LOAD : Test(6) {
+sub _test_loader {
     my $self = shift;
-    my $loader = Bio::Chado::Loader::FASTA->new(
+    Bio::Chado::Loader::FASTA->new(
         db_dsn   => 'dbi:SQLite:dbname=:memory:',
         type_name => 'sequence_assembly',
         create_features => 1,
@@ -32,7 +32,13 @@ sub TEST_LOAD : Test(6) {
         analysis_name => 'Test analysis',
         source => 'test_source',
         large_residues => 800,
+        @_
        );
+}
+
+sub TEST_LOAD : Test(6) {
+    my $self = shift;
+    my $loader = $self->_test_loader;
     $loader->schema->deploy;
     $loader->schema->txn_do( sub { $self->_populate( $loader->schema ) } );
 

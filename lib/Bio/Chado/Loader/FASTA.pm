@@ -32,6 +32,12 @@ has schema => (
     lazy_build => 1,
 );
 
+with 'Bio::Chado::Loader';
+
+has '+organism_name' => (
+    required => 1,
+);
+
 =head3 --create_features
 
 Boolean flag.  If passed, autocreate features for each of the fasta sequences.
@@ -54,23 +60,25 @@ If creating features, the string SO term name to use for the type of these featu
 
 has type_name => (
     documentation => <<'',
-string SO term name to use for these sequences.  E.g. 'sequence_assembly' or 'EST'
+required, string SO term name to use for these sequences.  E.g. 'sequence_assembly' or 'EST'
 
     is       => 'ro',
     isa      => 'Str',
+
+    required => 1,
    );
 
 =head3 --analysis_name <string>
 
 If creating features, pass this option to make an C<analysis> row with
-programname and optionally C<source> (see below), and connect the
+C<programname> and optionally C<source> (see below), and connect the
 features to it.
 
 =cut
 
 has analysis_name => (
     documentation => <<'',
-connect features to this analysis (C<analysis.programname>)
+connect features to this analysis (analysis.programname)
 
     is  => 'ro',
     isa => 'Str',
@@ -96,7 +104,7 @@ string source name describing the source of these sequences. E.g. 'ITAG2'
 Sequence length above which the residues will be stored as a
 'large_residues' featureprop, instead of in the residues column.  Very
 large residues values can cause performance issues when using
-L<Bio::Chado::Schema>.
+L<Bio::Chado::Schema>.  Default 4MB.
 
 =cut
 
@@ -107,7 +115,7 @@ threshold (in bp) above which residues are stored in a 'large_residues' featurep
 
     is => 'ro',
     isa => 'Int',
-    default => 2**22,
+    default => 4_000_000,
    );
 
 
@@ -149,8 +157,6 @@ sub _build_organism {
         or die "Organism (genus: '$genus', species: '$species' not found, and could not create.\n";
     return $o;
 }
-
-with 'Bio::Chado::Loader';
 
 sub run {
     my ( $self, @files ) = @_;
@@ -202,7 +208,7 @@ sub _find_or_create_feature {
                      name        => $id,
                      seqlen      => $seqlen,
                      md5checksum => md5_hex( $$seq ),
-                     is_analysis => !!$self->analysis_name,
+                     is_analysis => $self->analysis_name ? 1 : 0,
                  });
 
         $self->_load_large_residues_as_featureprop( $feature, $seq )
