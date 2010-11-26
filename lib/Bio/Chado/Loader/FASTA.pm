@@ -298,8 +298,9 @@ the cvterm for the 'large_residues' featureprop type
 sub parse_fasta {
     my ( $self, $seq ) = @_;
 
-    $$seq =~ s/^ >? \s* (\S+) \s+ ([^\r\n]*) //x or die "Error parsing fasta chunk '$$seq'";
-    my ( $id, $defline ) = ( $1, $2 );
+    $$seq =~ s/^>?\s*(.+)\r?\n// or die "Error parsing fasta chunk '$$seq'";
+    my ( $id, $defline ) = split /\s+/, $1, 2;
+    $defline =~ s/^\s+|\s+$//g if $defline;
     $$seq =~ s/[\s>]//g;
 
     return ( $id, $defline );

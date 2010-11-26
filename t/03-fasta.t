@@ -12,14 +12,29 @@ sub TEST_FASTA_SPOOLING : Test(1) {
     is( $self->_count_stream( $s ), 4, 'got 4 seqs from the seq stream' );
 }
 
-sub TEST_FASTA_PARSE : Test(3) {
+sub TEST_FASTA_PARSE : Test(6) {
     my $self = shift;
     my $loader = $self->_test_loader;
-    my $seq = "foo234.12_X|27  bar bal bas[1]\r\nAATCGATCGATCG\nATCGTACGATCAG AGTAGCT\n";
-    my ( $id, $dl ) = $loader->parse_fasta( \$seq );
-    is( $id,  'foo234.12_X|27', 'right ID' );
-    is( $dl,  'bar bal bas[1]', 'right defline' );
-    is( $seq, 'AATCGATCGATCGATCGTACGATCAGAGTAGCT', 'right sequence' );
+    my @test_seqs = (
+        [ "foo234.12_X|27  bar bal bas[1]\r\nAATCGATCGATCG\nATCGTACGATCAG AGTAGCT\n",
+          "foo234.12_X|27",
+          "bar bal bas[1]",
+          "AATCGATCGATCGATCGTACGATCAGAGTAGCT",
+        ],
+        [ "foo234.12_X|27\nAATCGATCGATCG\nATCGTACGATCAG AGTAGCT\n",
+          "foo234.12_X|27",
+          undef,
+          "AATCGATCGATCGATCGTACGATCAGAGTAGCT",
+         ],
+       );
+
+    for (@test_seqs) {
+        my ( $seq, $tid, $tdefline, $tseq_after ) = @$_;
+        my ( $id, $dl ) = $loader->parse_fasta( \$seq );
+        is( $id,  $tid, 'right ID' );
+        is( $dl,  $tdefline, 'right defline' );
+        is( $seq, $tseq_after, 'right sequence' );
+    }
 }
 
 sub _test_loader {
@@ -31,7 +46,7 @@ sub _test_loader {
         organism_name => 'Tyrannosaurus _ Tyrannosaurus rex',
         analysis_name => 'Test analysis',
         source => 'test_source',
-        large_residues => 800,
+        large_residues => 1000,
         @_
        );
 }
@@ -45,18 +60,22 @@ sub TEST_LOAD : Test(6) {
     $loader->run( @test_fasta );
 
     is( $loader->schema->resultset('Sequence::Feature')->count, 4, 'correct feature count' );
-    is( $loader->schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' );
+    is( $loader->schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' )
+        or diag explain( [ map { +{ $_->type->name => $_->value } } $loader->schema->resultset('Sequence::Featureprop')->all ] );
 
     # run the load again and test that we did not get duplicate features
     $loader->run( @test_fasta );
     is( $loader->schema->resultset('Sequence::Feature')->count, 4, 'correct feature count' );
-    is( $loader->schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' );
+    is( $loader->schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' )
+        or diag explain map { +{ $_->type->name => $_->value } } $loader->schema->resultset('Sequence::Featureprop')->all;
 
     # run it yet again with create_features off
     $loader->create_features( 0 );
     $loader->run( @test_fasta );
     is( $loader->schema->resultset('Sequence::Feature')->count, 4, 'correct feature count' );
-    is( $loader->schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' );
+    is( $loader->schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' )
+        or diag explain map { +{ $_->type->name => $_->value } } $loader->schema->resultset('Sequence::Featureprop')->all;
+
 
 
 }
