@@ -16,10 +16,10 @@ sub TEST_FASTA_PARSE : Test(6) {
     my $self = shift;
     my $loader = $self->_test_loader;
     my @test_seqs = (
-        [ "foo234.12_X|27  bar bal bas[1]\r\nAATCGATCGATCG\nATCGTACGATCAG AGTAGCT\n",
+        [ "foo234.12_X|27  bar bal bas[1]\r\nAATCGATCGATCG\nATCGTACGATCAG AGTAGCT\nAATCGATCGATCG\n",
           "foo234.12_X|27",
           "bar bal bas[1]",
-          "AATCGATCGATCGATCGTACGATCAGAGTAGCT",
+          "AATCGATCGATCGATCGTACGATCAGAGTAGCTAATCGATCGATCG",
         ],
         [ "foo234.12_X|27\nAATCGATCGATCG\nATCGTACGATCAG AGTAGCT\n",
           "foo234.12_X|27",

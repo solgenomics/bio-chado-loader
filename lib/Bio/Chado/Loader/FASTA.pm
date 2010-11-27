@@ -336,6 +336,8 @@ sub fasta_stream {
         else {
             $pipe->print( $_ ) while <STDIN>;
         }
+
+        $pipe->close;
         POSIX::_exit(0);
     }
 }
