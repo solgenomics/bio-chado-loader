@@ -176,7 +176,7 @@ sub _find_or_create_feature {
     my ( $self, $id, $defline, $seq ) = @_;
 
     my $seqlen = length $$seq;
-    my @load_residues = $seqlen < $self->large_residues ? ( residues => $$seq ) : ();
+    my $load_residues = $seqlen < $self->large_residues ? 1 : 0;
 
     my $feature =
         $self->_feature_type
@@ -185,9 +185,12 @@ sub _find_or_create_feature {
                  uniquename => $id,
                 });
     if( $feature ) {
-        if( @load_residues ) {
+        $feature->set_columns({
+            seqlen      => $seqlen,
+            md5checksum => md5_hex( $$seq ),
+        });
+        if( $load_residues ) {
             $feature->residues( $$seq );
-            $feature->update;
         } else {
             $self->_load_large_residues_as_featureprop( $feature, $seq );
         }
@@ -202,7 +205,7 @@ sub _find_or_create_feature {
         $feature =
             $self->_feature_type
                  ->create_related( 'features', {
-                     @load_residues,
+                     ( $load_residues ? ( residues => $$seq ) : () ),
                      organism    => $self->organism,
                      uniquename  => $id,
                      name        => $id,
@@ -212,7 +215,7 @@ sub _find_or_create_feature {
                  });
 
         $self->_load_large_residues_as_featureprop( $feature, $seq )
-            unless @load_residues;
+            unless $load_residues;
 
         if( $self->analysis_name ) {
             $feature->add_to_analysisfeatures({
@@ -222,7 +225,7 @@ sub _find_or_create_feature {
     }
 
     $feature or die "Feature not found for id '$id', and could not create\n";
-
+    $feature->update;
 }
 
 # if we did not load residues in the feature table, we will load
@@ -246,6 +249,8 @@ sub _load_large_residues_as_featureprop {
         type_id => $self->_large_seq_type->cvterm_id,
         value   => $$seq,
     });
+
+    $feature->residues( undef );
 }
 
 has '_analysis' => (

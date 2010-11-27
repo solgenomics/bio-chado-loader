@@ -72,11 +72,10 @@ sub TEST_LOAD : Test(6) {
     # run it yet again with create_features off
     $loader->create_features( 0 );
     $loader->run( @test_fasta );
-    is( $loader->schema->resultset('Sequence::Feature')->count, 4, 'correct feature count' );
-    is( $loader->schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' )
+    my $schema = $loader->schema;
+    is( $schema->resultset('Sequence::Feature')->count, 4, 'correct feature count' );
+    is( $schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' )
         or diag explain map { +{ $_->type->name => $_->value } } $loader->schema->resultset('Sequence::Featureprop')->all;
-
-
 
 }
 
