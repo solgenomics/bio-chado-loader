@@ -46,7 +46,7 @@ sub _test_loader {
         organism_name => 'Tyrannosaurus _ Tyrannosaurus rex',
         analysis_name => 'Test analysis',
         source => 'test_source',
-        large_residues => 1000,
+        large_residues => 2000,
         @_
        );
 }
@@ -61,13 +61,13 @@ sub TEST_LOAD : Test(6) {
 
     is( $loader->schema->resultset('Sequence::Feature')->count, 4, 'correct feature count' );
     is( $loader->schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' )
-        or diag explain( [ map { +{ $_->type->name => $_->value } } $loader->schema->resultset('Sequence::Featureprop')->all ] );
+        or diag explain( [ map { [ $_->feature_id, $_->type->name => $_->value ] } $loader->schema->resultset('Sequence::Featureprop')->all ] );
 
     # run the load again and test that we did not get duplicate features
     $loader->run( @test_fasta );
     is( $loader->schema->resultset('Sequence::Feature')->count, 4, 'correct feature count' );
     is( $loader->schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' )
-        or diag explain map { +{ $_->type->name => $_->value } } $loader->schema->resultset('Sequence::Featureprop')->all;
+        or diag explain( [ map { [ $_->feature_id, $_->type->name => $_->value ] } $loader->schema->resultset('Sequence::Featureprop')->all ] );
 
     # run it yet again with create_features off
     $loader->create_features( 0 );
@@ -75,7 +75,7 @@ sub TEST_LOAD : Test(6) {
     my $schema = $loader->schema;
     is( $schema->resultset('Sequence::Feature')->count, 4, 'correct feature count' );
     is( $schema->resultset('Sequence::Featureprop')->count, 1, 'correct featureprop count' )
-        or diag explain map { +{ $_->type->name => $_->value } } $loader->schema->resultset('Sequence::Featureprop')->all;
+        or diag explain( [ map { [ $_->feature_id, $_->type->name => $_->value ] } $loader->schema->resultset('Sequence::Featureprop')->all ] );
 
 }
 
