@@ -1,17 +1,22 @@
+package Bio::Chado::Loader::FASTA;
+
 =head1 NAME
 
-Bio::Chado::Load::FASTA - mx-runnable class for loading FASTA
-sequences into a Chado schema
+Bio::Chado::Loader::FASTA - Load FASTA sequences into a Chado schema
 
 =head1 SYNOPSIS
 
 mx-run Bio::Chado::Loader::FASTA [ options ] fasta_file fasta_file ...
 
+=head1 DESCRIPTION
+
+This is a MooseX::Runnable class that loads bioinformatics data given
+in FASTA format into a Chado schema.
+
 =head2 Options
 
 =cut
 
-package Bio::Chado::Loader::FASTA;
 use Moose;
 
 use namespace::autoclean;
