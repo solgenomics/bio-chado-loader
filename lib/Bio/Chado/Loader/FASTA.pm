@@ -65,7 +65,7 @@ If creating features, the string SO term name to use for the type of these featu
 
 has type_name => (
     documentation => <<'',
-required, string SO term name to use for these sequences.  E.g. 'sequence_assembly' or 'EST'
+required, string Sequence Ontology (SO) term name to use for these sequences.  E.g. 'sequence_assembly' or 'EST'
 
     is       => 'ro',
     isa      => 'Str',
