@@ -166,12 +166,14 @@ sub _build_organism {
 sub run {
     my ( $self, @files ) = @_;
 
+    print "Going to load " . scalar(@files) . " FASTA files\n";
     my $stream = $self->fasta_stream( \@files );
     local $/ = "\n>";
 
     $self->schema->txn_do( sub {
         while( my $seq = <$stream> ) {
             my ( $id, $defline ) = $self->parse_fasta( \$seq );
+            print "Parsed $defline FASTA\n";
             $self->_find_or_create_feature( $id, $defline, \$seq );
         }
     });
@@ -190,6 +192,7 @@ sub _find_or_create_feature {
                  uniquename => $id,
                 });
     if( $feature ) {
+        print "Found $defline and updating\n";
         $feature->set_columns({
             seqlen      => $seqlen,
             md5checksum => md5_hex( $$seq ),
@@ -207,6 +210,7 @@ sub _find_or_create_feature {
         }
     }
     elsif( $self->create_features ) {
+        print "Creating $defline\n";
         $feature =
             $self->_feature_type
                  ->create_related( 'features', {
