@@ -163,10 +163,22 @@ sub _build_organism {
     return $o;
 }
 
+sub _usage {
+
+return <<USAGE;
+
+At least one FASTA file must be given to load.
+
+USAGE
+
+}
+
 sub run {
     my ( $self, @files ) = @_;
 
-    print "Going to load " . scalar(@files) . " FASTA files\n";
+    die _usage() unless scalar(@files) > 0;
+
+    print "Going to load " . @files . " FASTA files\n";
     my $stream = $self->fasta_stream( \@files );
     local $/ = "\n>";
 
