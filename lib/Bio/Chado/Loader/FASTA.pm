@@ -24,6 +24,7 @@ use namespace::autoclean;
 use POSIX;
 use IO::Pipe;
 use Digest::MD5 'md5_hex';
+use Carp::Clan;
 
 use autodie ':all';
 
@@ -245,7 +246,7 @@ sub _find_or_create_feature {
         }
     }
 
-    $feature or die "Feature not found for id '$id', and could not create\n";
+    $feature or confess "Feature not found for id '$id', and could not create";
     $feature->update;
 }
 
