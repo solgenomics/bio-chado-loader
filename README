@@ -1,6 +1,6 @@
 Bio::Chado::Loader
 
-Load data with Bio::Chado::Schema into the Chado database
+Load data with Bio::Chado::Loader into the Chado database
 
 INSTALLATION
 
