@@ -2,8 +2,6 @@ package Bio::Chado::Loader::FixGMODBulkGFF3Polypeptides;
 use Moose;
 use namespace::autoclean;
 
-use Digest::MD5 'md5_hex';
-
 with 'MooseX::Runnable';
 with 'MooseX::Getopt';
 
