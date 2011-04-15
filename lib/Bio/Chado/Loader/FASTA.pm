@@ -44,6 +44,10 @@ has '+organism_name' => (
     required => 1,
 );
 
+has '+db_attrs' => (
+    traits => [ 'NoGetopt' ],
+);
+
 =head3 --create_features
 
 Boolean flag.  If passed, autocreate features for each of the fasta sequences.

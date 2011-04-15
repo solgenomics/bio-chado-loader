@@ -41,11 +41,6 @@ has organism_name => (
     isa      => 'Str',
 );
 
-has filename => (
-    is      => 'ro',
-    isa     => 'Str',
-);
-
 requires 'schema';
 
 # default _build_schema just connects with the db args.  consuming
