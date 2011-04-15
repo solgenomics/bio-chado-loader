@@ -121,7 +121,7 @@ L<Bio::Chado::Schema>.  Default 4MB.
 # NOTE: scientific notation OK for this
 has large_residues => (
     documentation => <<'',
-threshold (in bp) above which residues are stored in a 'large_residues' featureprop
+threshold (in bp) above which residues are stored in a 'large_residues' featureprop.  Default 4000000 (4M).
 
     is => 'ro',
     isa => 'Int',
