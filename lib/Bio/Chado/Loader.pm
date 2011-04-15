@@ -35,9 +35,7 @@ has db_attrs => (
 );
 
 has organism_name => (
-    documentation => <<'',
-exact genus and species of organism, separated by underscore,
-e.g. "Solanum _ lycopersicum var. cerasiforme"
+    documentation => 'exact genus and species of organism, separated by underscore, e.g. "Solanum _ lycopersicum var. cerasiforme"',
 
     is       => 'ro',
     isa      => 'Str',
