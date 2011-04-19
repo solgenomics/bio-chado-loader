@@ -202,12 +202,18 @@ sub _find_or_create_feature {
     my $seqlen = length $$seq;
     my $load_residues = $seqlen < $self->large_residues ? 1 : 0;
 
-    my $feature =
+    my @features =
         $self->_feature_type
-             ->find_related( 'features', {
-                 organism   => $self->organism,
-                 uniquename => $id,
+             ->search_related( 'features', {
+                 organism_id => $self->organism->organism_id,
+                 name        => $id,
                 });
+    if( @features > 1 ) {
+        die @features." features found for organism ".$self->organism->organism_id.", type_id ".$self->_feature_type->cvterm_id.', name "'.$id."\", I cannot decide which to use.  Do you really want both of them in your database?\n";
+    }
+
+    my $feature = $features[0];
+
     if( $feature ) {
         print "Adding sequence to existing feature $id\n";
         #print "Found $defline and updating\n";
