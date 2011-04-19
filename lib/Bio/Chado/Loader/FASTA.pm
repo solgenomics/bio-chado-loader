@@ -190,7 +190,7 @@ sub run {
     $self->schema->txn_do( sub {
         while( my $seq = <$stream> ) {
             my ( $id, $defline ) = $self->parse_fasta( \$seq );
-            print "Parsed $defline FASTA\n";
+            #print "Parsed $defline FASTA\n";
             $self->_find_or_create_feature( $id, $defline, \$seq );
         }
     });
@@ -209,7 +209,8 @@ sub _find_or_create_feature {
                  uniquename => $id,
                 });
     if( $feature ) {
-        print "Found $defline and updating\n";
+        print "Adding sequence to existing feature $id\n";
+        #print "Found $defline and updating\n";
         $feature->set_columns({
             seqlen      => $seqlen,
             md5checksum => md5_hex( $$seq ),
@@ -227,7 +228,7 @@ sub _find_or_create_feature {
         }
     }
     elsif( $self->create_features ) {
-        print "Creating $defline\n";
+        print "Creating feature $id\n";
         $feature =
             $self->_feature_type
                  ->create_related( 'features', {
