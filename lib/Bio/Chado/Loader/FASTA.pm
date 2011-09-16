@@ -257,7 +257,7 @@ sub _find_or_create_feature {
         }
     }
 
-    $feature or confess "Feature not found for id '$id', and could not create";
+    $feature or confess "Feature not found for organism '".$self->organism_name."' with id '$id', and could not create";
     $feature->update;
 }
 
