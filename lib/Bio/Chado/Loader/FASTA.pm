@@ -308,7 +308,7 @@ has '_large_seq_type' => (
 the cvterm for the 'large_residues' featureprop type
 
     is => 'ro',
-    isa => 'Bio::Chado::Schema::Cv::Cvterm',
+    isa => 'DBIx::Class::Row',
     lazy_build => 1,
    ); sub _build__large_seq_type {
        my ( $self ) = @_;
