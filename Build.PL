@@ -20,6 +20,7 @@ my $build = Module::Build->new(
     requires       => {
         'autodie'             => 0,
         'IPC::System::Simple' => 0, # for autodie qw/:all/
+	'Memoize'             => 0,
         'Moose'               => '1.0',
         'MooseX::Runnable'    => 0,
         'MooseX::Getopt'      => 0,

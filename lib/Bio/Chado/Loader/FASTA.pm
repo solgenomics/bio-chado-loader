@@ -89,10 +89,10 @@ will extract the feature's type.  Cannot specify both --type_name and
 {
   my $re = subtype as 'RegexpRef';
   coerce $re, from 'Str', via { eval "qr/$_/" or die "invalid regex '$_'\n" };
+  MooseX::Getopt::OptionTypeMap->add_option_type_to_map( $re => '=s' );
   has type_regex => (
       documentation => <<'',
-regular expression with a parentheses capture that will extract the
-feature's type name from the ">ID defline" string.
+regular expression with a parentheses capture that will extract the feature's type name from the ">ID defline" string.
 
       is     => 'ro',
       isa    => $re,
@@ -170,14 +170,7 @@ sub _build__fixed_feature_type {
 
     return unless $self->type_name;
 
-    my $cvt =
-        $self->schema->resultset('Cv::Cv')
-             ->search({ 'me.name' => 'sequence' })
-             ->search_related('cvterms', {
-                 'cvterms.name'        => $self->type_name,
-                 'cvterms.is_obsolete' => 0,
-               })
-             ->single
+    my $cvt = $self->_get_so_term( $self->type_name )
       or die "SO term '".$self->type_name."' not found in database.\n";
 
     return $cvt;
@@ -191,6 +184,13 @@ sub _feature_type {
         or die "cannot parse type name from '$id $defline' using type regex "
                .$self->type_regex."\n";
 
+    return $self->_get_so_term( $type_name );
+}
+
+use Memoize;
+memoize('_get_so_term');
+sub _get_so_term {
+    my ( $self, $type_name ) = @_;
     return $self->schema->resultset('Cv::Cv')
                 ->search({ 'me.name' => 'sequence' })
                 ->search_related('cvterms', {
@@ -307,7 +307,7 @@ sub _find_or_create_feature {
         }
     }
 
-    $feature or confess "Feature not found for organism '".$self->organism_name."' with id '$id', and could not create";
+    $feature or confess "Feature not found for organism '".$self->organism_name."' with id '$id' and type ".$feature_type->name." and could not create";
     $feature->update;
 }
 
