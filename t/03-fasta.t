@@ -79,6 +79,45 @@ sub TEST_LOAD : Test(6) {
 
 }
 
+sub _test_loader_2 {
+    my $self = shift;
+    Bio::Chado::Loader::FASTA->new(
+        db_dsn   => 'dbi:SQLite:dbname=:memory:',
+        type_regex => 'type:(\S+)',
+        create_features => 1,
+        organism_name => 'Tyrannosaurus _ Tyrannosaurus rex',
+        analysis_name => 'Test analysis',
+        source => 'test_source',
+        large_residues => 1000,
+        @_
+       );
+}
+
+sub TEST_LOAD_2 : Test(6) {
+    my $self = shift;
+    my $loader = $self->_test_loader_2;
+    $loader->schema->deploy;
+    $loader->schema->txn_do( sub { $self->_populate( $loader->schema ) } );
+
+    $loader->run( @test_fasta );
+
+    is( $loader->schema->resultset('Sequence::Feature')->count, 4, 'correct feature count' );
+    is( $loader->schema->resultset('Sequence::Featureprop')->count, 2, 'correct featureprop count' );
+
+    for (
+          [ 'test1.1' => 'beef_stew' ],
+          [ 'test1.2' => 'sequence_assembly' ],
+          [ 'test2.1' => 'chicken_soup' ],
+          [ 'test2.2' => 'beef_stew' ],
+        ) {
+
+        is( $loader->schema->resultset('Sequence::Feature')->find({ name => $_->[0] })->type->name,
+            $_->[1],
+            "$_->[0] has type $_->[1]"
+          );
+    }
+}
+
 sub _populate {
     my ( $self, $schema) = @_;
 
@@ -86,8 +125,8 @@ sub _populate {
            ->create_with({
                cv   => 'sequence',
                db   => 'null',
-               name => 'sequence_assembly',
-           });
+               name => $_,
+           }) for qw/ sequence_assembly chicken_soup beef_stew /;
 
     $schema->resultset('Organism::Organism')
            ->create({

@@ -18,6 +18,7 @@ in FASTA format into a Chado schema.
 =cut
 
 use Moose;
+use Moose::Util::TypeConstraints;
 
 use namespace::autoclean;
 
@@ -70,13 +71,42 @@ If creating features, the string SO term name to use for the type of these featu
 
 has type_name => (
     documentation => <<'',
-required, string Sequence Ontology (SO) term name to use for these sequences.  E.g. 'sequence_assembly' or 'EST'
+string Sequence Ontology (SO) term name to use for these sequences.  E.g. 'sequence_assembly' or 'EST'
 
     is       => 'ro',
     isa      => 'Str',
 
-    required => 1,
    );
+
+=head3 --type_regex <string>
+
+A regular expression that, when run against the ">ID defline" string,
+will extract the feature's type.  Cannot specify both --type_name and
+--type_regex.
+
+=cut
+
+{
+  my $re = subtype as 'RegexpRef';
+  coerce $re, from 'Str', via { eval "qr/$_/" or die "invalid regex '$_'\n" };
+  has type_regex => (
+      documentation => <<'',
+regular expression with a parentheses capture that will extract the
+feature's type name from the ">ID defline" string.
+
+      is     => 'ro',
+      isa    => $re,
+      coerce => 1,
+     );
+}
+
+sub BUILD  {
+  my $self = shift;
+
+  # check that either type_name or type_regex is set
+  $self->type_name || $self->type_regex
+      or die "must specify either a --type_name or --type_regex\n";
+};
 
 =head3 --analysis_name <string>
 
@@ -129,15 +159,16 @@ threshold (in bp) above which residues are stored in a 'large_residues' featurep
    );
 
 
-
-has '_feature_type' => (
+has '_fixed_feature_type' => (
     is => 'ro',
-    isa => 'DBIx::Class::Row',
+    isa => 'Maybe[DBIx::Class::Row]',
     traits => ['NoGetopt'],
     lazy_build => 1,
    );
-sub _build__feature_type {
+sub _build__fixed_feature_type {
     my ( $self ) = @_;
+
+    return unless $self->type_name;
 
     my $cvt =
         $self->schema->resultset('Cv::Cv')
@@ -150,6 +181,23 @@ sub _build__feature_type {
       or die "SO term '".$self->type_name."' not found in database.\n";
 
     return $cvt;
+}
+
+sub _feature_type {
+    my ( $self, $id, $defline ) = @_;
+    return $self->_fixed_feature_type if $self->_fixed_feature_type;
+
+    my ( $type_name ) = "$id $defline" =~ $self->type_regex
+        or die "cannot parse type name from '$id $defline' using type regex "
+               .$self->type_regex."\n";
+
+    return $self->schema->resultset('Cv::Cv')
+                ->search({ 'me.name' => 'sequence' })
+                ->search_related('cvterms', {
+                    'cvterms.name'        => $type_name,
+                    'cvterms.is_obsolete' => 0,
+                   })
+                ->single;
 }
 
 has organism => (
@@ -202,14 +250,16 @@ sub _find_or_create_feature {
     my $seqlen = length $$seq;
     my $load_residues = $seqlen < $self->large_residues ? 1 : 0;
 
+    my $feature_type = $self->_feature_type( $id, $defline );
+
     my @features =
-        $self->_feature_type
+        $feature_type
              ->search_related( 'features', {
-                 organism_id => $self->organism->organism_id,
-                 name        => $id,
+                 'me.organism_id' => $self->organism->organism_id,
+                 'me.name' => $id,
                 });
     if( @features > 1 ) {
-        die @features." features found for organism ".$self->organism->organism_id.", type_id ".$self->_feature_type->cvterm_id.', name "'.$id."\", I cannot decide which to use.  Do you really want both of them in your database?\n";
+        die @features." features found for organism ".$self->organism->organism_id.", type_id ".$feature_type->cvterm_id.', name "'.$id."\", I cannot decide which to use.  Do you really want both of them in your database?\n";
     }
 
     my $feature = $features[0];
@@ -236,7 +286,7 @@ sub _find_or_create_feature {
     elsif( $self->create_features ) {
         print "Creating feature $id\n";
         $feature =
-            $self->_feature_type
+            $feature_type
                  ->create_related( 'features', {
                      ( $load_residues ? ( residues => $$seq ) : () ),
                      organism    => $self->organism,
@@ -288,7 +338,7 @@ sub _load_large_residues_as_featureprop {
 
 has '_analysis' => (
     is => 'ro',
-    isa => 'Bio::Chado::Schema::Companalysis::Analysis',
+    isa => 'DBIx::Class::Row',
     lazy_build => 1,
    ); sub _build__analysis {
        my ( $self ) = @_;
