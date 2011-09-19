@@ -7,14 +7,14 @@ my @test_fasta = qw( t/data/test1.fasta t/data/test2.fasta );
 
 sub TEST_FASTA_SPOOLING : Test(1) {
     my $self = shift;
-    my $loader = $self->_test_loader;
+    my $loader = $self->_test_loader_1;
     my $s = $loader->fasta_stream( \@test_fasta );
     is( $self->_count_stream( $s ), 4, 'got 4 seqs from the seq stream' );
 }
 
 sub TEST_FASTA_PARSE : Test(6) {
     my $self = shift;
-    my $loader = $self->_test_loader;
+    my $loader = $self->_test_loader_1;
     my @test_seqs = (
         [ "foo234.12_X|27  bar bal bas[1]\r\nAATCGATCGATCG\nATCGTACGATCAG AGTAGCT\nAATCGATCGATCG\n",
           "foo234.12_X|27",
@@ -37,7 +37,7 @@ sub TEST_FASTA_PARSE : Test(6) {
     }
 }
 
-sub _test_loader {
+sub _test_loader_1 {
     my $self = shift;
     Bio::Chado::Loader::FASTA->new(
         db_dsn   => 'dbi:SQLite:dbname=:memory:',
@@ -53,7 +53,7 @@ sub _test_loader {
 
 sub TEST_LOAD : Test(6) {
     my $self = shift;
-    my $loader = $self->_test_loader;
+    my $loader = $self->_test_loader_1;
     $loader->schema->deploy;
     $loader->schema->txn_do( sub { $self->_populate( $loader->schema ) } );
 
