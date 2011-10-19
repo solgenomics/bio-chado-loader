@@ -174,7 +174,7 @@ sub find_or_create_features {
                              organism   => $self->_find_organism( $member->{species} ),
                          });
             } else {
-                die "$.: no feature found with name $name, and --create_members option not passed\n";
+                die "$.: no ".$self->member_type." feature found with name $name, and --create_members option not passed\n";
             }
         }
     }
