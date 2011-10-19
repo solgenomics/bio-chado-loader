@@ -83,7 +83,7 @@ sub _find_cvterm {
                  ->search( { 'me.name' => $cv })
                  ->search_related( 'cvterms', { 'cvterms.name' => $term } )
                  ->single;
-    $t or die "Cannot find required cvterm in SO called ".$self->group_type.".  Is this term in SO, and is SO loaded?";
+    $t or die "Cannot find required '$term' term in $cv ontology.  Does this term exist?  Is the $cv ontology loaded?";
     return $t;
 }
 
