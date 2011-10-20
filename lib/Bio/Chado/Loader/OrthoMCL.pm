@@ -11,7 +11,9 @@ mx-run Bio::Chado::Loader::OrthoMCL [ options ] orthomcl.out orthomcl.out ...
 =head1 DESCRIPTION
 
 This is a MooseX::Runnable class that loads OrthoMCL groups into a
-Chado schema as feature_relationships.
+Chado schema as features and feature_relationships.  Makes a feature
+for the group, and then adds feature_relationships with type
+C<member_of> between the group and its members.
 
 =head2 Options
 
