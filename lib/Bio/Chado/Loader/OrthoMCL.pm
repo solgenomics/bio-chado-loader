@@ -134,15 +134,13 @@ sub load_group {
                          organism   => $self->_find_organism( 'any' ),
                        });
 
-    my $member_of = $self->_member_of_term;
+    my $member_of_id = $self->_member_of_term->cvterm_id;
     # insert feature relationships for each of the group members
-    for my $member ( values %$features ) {
-        $self->schema->populate( 'Sequence::FeatureRelationship', [
-            [  qw[ subject  type         object            ]],
-            map {[ $_,      $member_of,  $group_feature    ]}
-            values %$features
-        ]);
-    }
+    $self->schema->populate( 'Sequence::FeatureRelationship', [
+        [  qw[  subject_id       type_id         object_id                   ]],
+        map {[  $_->feature_id,  $member_of_id,  $group_feature->feature_id  ]}
+        values %$features
+    ]);
 }
 
 has '_org_cache' => ( is => 'ro', default => sub { {} } );
