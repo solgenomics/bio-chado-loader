@@ -109,6 +109,7 @@ sub run {
             my $fh = IO::File->new( $file, '<' );
             while( <$fh> ) {
                 my $group = $self->parse_orthomcl_group_line( $_ );
+		print "loading $group->{group}{id} ($group->{group}{genes} genes)\n";
                 $self->load_group( $group );
             }
         }
