@@ -98,6 +98,12 @@ sub _build__member_of_term {
     shift->_find_cvterm( sequence => 'member_of' );
 }
 
+has 'dry_run' => (
+    is => 'ro',
+    documentation => 'if passed, do not actually write to the database',
+    isa => 'Bool',
+    default => 0,
+  );
 
 sub run {
     my ( $self, @ortho_files ) = @_;
@@ -114,7 +120,7 @@ sub run {
             }
         }
 
-        die "dry run, rolling back.\n";
+        die "dry run, rolling back.\n" if $self->dry_run;
     });
 }
 
