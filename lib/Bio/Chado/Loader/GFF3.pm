@@ -19,7 +19,13 @@ has features => (
         count_features => 'count',
         feature_exists => 'exists',
     },
-);
+    );
+
+#Added SS, LM
+has filename => (
+    is      => 'rw',
+    isa     => 'Str',
+    );
 
 has cvterms => (
     is      => 'rw',
