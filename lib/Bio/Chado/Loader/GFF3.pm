@@ -1,5 +1,23 @@
 package Bio::Chado::Loader::GFF3;
 
+=head1 NAME
+
+Bio::Chado::Loader::GFF3 - Load GFF3 files into the Chado database schema
+
+=head1 SYNOPSIS
+
+  use Bio::Chado::Loader;
+
+
+=head1 DESCRIPTION
+
+The GFF3 spec is available online at L<http://www.sequenceontology.org/gff3.shtml>
+
+=over
+
+=cut
+
+
 use Moose;
 with 'MooseX::Runnable';
 with 'MooseX::Getopt';
@@ -21,8 +39,7 @@ has features => (
     },
     );
 
-#Added SS, LM
-has filename => (
+has filename => (#Added SS, LM
     is      => 'rw',
     isa     => 'Str',
     );
@@ -63,11 +80,23 @@ set true if this feature should be recorded as from an analysis
     default => 0,
 );
 
+=item C<run ()>
+
+
+
+=cut
+
 sub run {
     my ($self, %args) = @_;
 
     exit 0;
 }
+
+=item C<parse ()>
+
+Parse a GFF3 file
+
+=cut
 
 sub parse {
     my ($self, %args) = @_;
@@ -81,10 +110,16 @@ sub parse {
     #warn Dumper [ $self->features ];
 }
 
+=item C<parse_line ()>
+
+Parse a GFF3 line
+
+=cut
+
 sub parse_line {
     my ($self, $line) = @_;
     my @fields = split /\t/, $line;
-    my $attribs = { map { split /=/, $_  }  split /;/, $fields[ATTRIBUTES] };
+    my $attribs = { map { split (/=/, $_)  }  split /;/, $fields[ATTRIBUTES] };
 
     $self->add_cvterm( $fields[TYPE]   => 1 );
     $self->add_feature( $attribs->{ID} || $fields[SEQID] => 1 );
@@ -92,10 +127,17 @@ sub parse_line {
     $self->_validate_parents($attribs);
 }
 
+=item C<_validate_parents ()>
+
+Check if parent feature exists
+
+=cut
+
+
 sub _validate_parents {
     my ($self, $attribs) = @_;
     return unless $attribs->{Parent};
-    my (@parents) = split /,/, $attribs->{Parent};
+    my (@parents) = split (/,/, $attribs->{Parent});
     for my $p (@parents) {
         unless ( $self->feature_exists( $p ) ) {
             die "$p is an unknown Parent!";
@@ -103,24 +145,32 @@ sub _validate_parents {
     }
 }
 
+=item C<is_pragma_line ()>
+
+Check if line is a pragma
+
+=cut
+
 sub is_pragma_line {
     my ($self, $line) = @_;
     return $line =~ m/^##/ ? 1 : 0;
 }
 
-=head1 NAME
+###
+1;   #do not remove
+###
 
-Bio::Chado::Loader::GFF3 - Load GFF3 files into the Chado database schema
+=pod
 
-=head1 SYNOPSIS
+=back
 
-  use Bio::Chado::Loader;
+=head1 LICENSE
 
+    Same as Perl.
 
-=head1 DESCRIPTION
+=head1 AUTHORS
 
-The GFF3 spec is available online at L<http://www.sequenceontology.org/gff3.shtml>
+    Jonathan "Duke" Leto	<duke@leto.net>
+    Surya Saha			<suryasaha@cornell.edu , @SahaSurya>   
 
 =cut
-
-1;
