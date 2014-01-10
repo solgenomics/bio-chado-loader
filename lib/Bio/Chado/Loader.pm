@@ -7,7 +7,7 @@ has db_dsn => (
     documentation => 'DBI dsn for our database',
 
     is      => 'ro',
-    default => 'chado',
+    default => 'dbi:Pg:dbname=cxgn',
     isa     => 'Str',
 );
 

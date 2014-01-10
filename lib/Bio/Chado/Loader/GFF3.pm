@@ -6,11 +6,13 @@ Bio::Chado::Loader::GFF3 - Load GFF3 files into the Chado database schema
 
 =head1 SYNOPSIS
 
-  use Bio::Chado::Loader;
+  use Bio::Chado::Loader::GFF3;
+  mx-run Bio::Chado::Loader::GFF3 [ options ] gff3_file gff3_file ...
 
 
 =head1 DESCRIPTION
 
+This is a MooseX::Runnable class that loads feature data given in GFF3 format into a Chado schema.
 The GFF3 spec is available online at L<http://www.sequenceontology.org/gff3.shtml>
 
 =over
@@ -82,7 +84,7 @@ set true if this feature should be recorded as from an analysis
 
 =item C<run ()>
 
-
+TODO // See Fasta
 
 =cut
 
@@ -170,7 +172,7 @@ sub is_pragma_line {
 
 =head1 AUTHORS
 
-    Jonathan "Duke" Leto	<duke@leto.net>
-    Surya Saha			<suryasaha@cornell.edu , @SahaSurya>   
+    Jonathan "Duke" Leto	<jonathan at leto.net>
+    Surya Saha			<suryasaha at cornell.edu , @SahaSurya>   
 
 =cut

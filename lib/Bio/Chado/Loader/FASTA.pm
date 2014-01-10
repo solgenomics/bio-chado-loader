@@ -208,7 +208,7 @@ has organism => (
    );
 sub _build_organism {
     my ( $self ) = @_;
-    my ( $genus, $species ) = split /\s*_\s*/, $self->organism_name, 2;
+    my ( $genus, $species ) = split (/\s*_\s*/, $self->organism_name, 2);
     my $o = $self->schema
                  ->resultset('Organism::Organism')
                  ->find_or_create({ genus => $genus, species => $species })
