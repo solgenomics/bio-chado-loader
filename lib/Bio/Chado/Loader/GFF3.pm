@@ -1,4 +1,6 @@
 package Bio::Chado::Loader::GFF3;
+use strict;
+use warnings;
 
 =head1 NAME
 
@@ -23,15 +25,32 @@ The GFF3 spec is available online at L<http://www.sequenceontology.org/gff3.shtm
 use Moose;
 with 'MooseX::Runnable';
 with 'MooseX::Getopt';
+#use Bio::GFF3::LowLevel  qw (gff3_parse_feature  gff3_format_feature gff3_parse_attributes);
+#use File::Basename;
 
 has schema => (
     is  => 'rw',
     isa => 'Bio::Chado::Schema',
 );
 
-has features => (
+has 'file_name' => (
+	isa       => 'Str',
+	is        => 'rw',
+	predicate => 'has_file_name',
+	clearer   => 'clear_file_name'
+);
+
+has 'pragma_lines' => (
+	isa       => 'ArrayRef[Str]',
+	is        => 'rw',
+	predicate => 'has_pragma_lines',
+	clearer   => 'clear_pragma_lines'
+);
+
+has 'features' => (
     is      => 'rw',
-    isa     => 'HashRef[Str]',
+    #isa     => 'HashRef[Str]',
+    isa     => 'HashRef[ArrayRef]',
     traits  => [ 'Hash' ],
     default => sub { { } },
     handles => {
@@ -40,13 +59,8 @@ has features => (
         feature_exists => 'exists',
     },
     );
-
-has filename => (#Added SS, LM
-    is      => 'rw',
-    isa     => 'Str',
-    );
-
-has cvterms => (
+    
+has 'cvterms' => (
     is      => 'rw',
     isa     => 'HashRef[Str]',
     traits  => [ 'Hash' ],
@@ -55,6 +69,15 @@ has cvterms => (
         add_cvterm    => 'set',
         count_cvterms => 'count',
     },
+);
+
+has 'is_analysis' => (
+    documentation => <<'',
+set true if this feature should be recorded as from an analysis
+
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0,
 );
 
 use constant SEQID         => 0;
@@ -73,18 +96,9 @@ use autodie qw(:all);
 use Data::Dumper;
 use 5.010;
 
-has is_analysis => (
-    documentation => <<'',
-set true if this feature should be recorded as from an analysis
-
-    is      => 'ro',
-    isa     => 'Bool',
-    default => 0,
-);
-
 =item C<run ()>
 
-TODO // See Fasta
+TODO // See Fasta.pm
 
 =cut
 
@@ -96,35 +110,36 @@ sub run {
 
 =item C<parse ()>
 
-Parse a GFF3 file
+Parse a GFF3 file. Calls parse_line() for each line.
 
 =cut
 
 sub parse {
     my ($self, %args) = @_;
-    open my $fh, "<", $self->filename;
+    open my $fh, "<", $self->file_name;
     while( my $line = <$fh> ) {
         next if $line =~ m/^\s*$/;
         chomp $line;
         next if $self->is_pragma_line($line);
         $self->parse_line($line);
     }
-    #warn Dumper [ $self->features ];
+    warn Dumper [ $self->features ];
 }
 
 =item C<parse_line ()>
 
-Parse a GFF3 line
+Parse a GFF3 line to get feature details.
 
 =cut
 
 sub parse_line {
     my ($self, $line) = @_;
-    my @fields = split /\t/, $line;
-    my $attribs = { map { split (/=/, $_)  }  split /;/, $fields[ATTRIBUTES] };
+    my @fields = split (/\t/, $line);
+    my $attribs = { map { split (/=/, $_)  }  split (/;/, $fields[ATTRIBUTES]) };
 
     $self->add_cvterm( $fields[TYPE]   => 1 );
-    $self->add_feature( $attribs->{ID} || $fields[SEQID] => 1 );
+    #$self->add_feature( $attribs->{ID} || $fields[SEQID] => 1 );
+    $self->add_feature( $attribs->{ID} || $fields[SEQID] => \@fields );
 
     $self->_validate_parents($attribs);
 }
