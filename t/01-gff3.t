@@ -16,7 +16,7 @@ sub TEST_IS_PRAGMA : Test(4) {
 
 sub TEST_ITAG1_GENOMIC_REF : Test(3) {
     my $loader = Bio::Chado::Loader::GFF3->new(
-        filename => "t/data/ITAG1_genomic_ref_sample.gff3",
+        file_name => "t/data/ITAG1_genomic_ref_sample.gff3",
     );
     isa_ok($loader, 'Bio::Chado::Loader::GFF3');
     $loader->parse();
@@ -26,7 +26,7 @@ sub TEST_ITAG1_GENOMIC_REF : Test(3) {
 
 sub TEST_CANONICAL_GENE : Tests {
     my $loader = Bio::Chado::Loader::GFF3->new(
-        filename => "t/data/canonical_gene.gff3",
+        file_name => "t/data/canonical_gene.gff3",
     );
     $loader->parse();
     is($loader->count_cvterms, 5, 'found 5 unique cvterms');
@@ -46,7 +46,7 @@ sub TEST_CANONICAL_GENE : Tests {
 
 sub TEST_UNKNOWN_PARENT : Tests {
     my $loader = Bio::Chado::Loader::GFF3->new(
-        filename => "t/data/unknown_parent.gff3",
+        file_name => "t/data/unknown_parent.gff3",
     );
     dies_ok sub { $loader->parse() }, qr/Bobby_Tables is an unknown Parent/;
 }
