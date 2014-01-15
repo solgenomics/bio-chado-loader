@@ -2,7 +2,7 @@
 
 use Test::More tests => 3;
 
-use lib './lib';
+use lib '../lib';
 
 BEGIN {
     use_ok( 'Bio::Chado::Loader' );

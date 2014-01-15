@@ -74,5 +74,17 @@ sub TEST_UNKNOWN_PARENT : Tests {
     dies_ok sub { $loader->parse() }, qr/Bobby_Tables is an unknown Parent/;
 }
 
+sub TEST_DB_CONNECT : Test(4){
+	my $loader = Bio::Chado::Loader::GFF3->new();
+	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
+	ok($loader->db_user('test_usr'),'assigned user');
+	ok($loader->db_pass('test_usr'),'assigned pw');
+    ok($loader->_build_schema(),'should not have worked');
+    print "local number of rows in feature table: ",
+        $loader->schema->resultset('Sequence::Feature')->count,
+        "\n";
+    
+}
+
 __PACKAGE__->runtests;
 
