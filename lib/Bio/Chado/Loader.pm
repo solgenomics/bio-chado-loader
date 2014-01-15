@@ -6,7 +6,7 @@ use Bio::Chado::Schema;
 has db_dsn => (
     documentation => 'DBI dsn for our database',
 
-    is      => 'ro',
+    is      => 'rw',
     default => 'dbi:Pg:dbname=cxgn',
     isa     => 'Str',
 );
@@ -14,7 +14,7 @@ has db_dsn => (
 has db_user => (
     documentation => 'database username',
 
-    is      => 'ro',
+    is      => 'rw',
     default => 'postgres',
     isa     => 'Str',
 );
@@ -22,14 +22,14 @@ has db_user => (
 has db_pass => (
     documentation => 'database password',
 
-    is      => 'ro',
+    is      => 'rw',
     isa     => 'Str',
 );
 
 has db_attrs => (
     documentation => 'hashref of DBI database attributes',
 
-    is      => 'ro',
+    is      => 'rw',
     isa     => 'HashRef',
     default => sub { +{} },
 );
@@ -37,7 +37,7 @@ has db_attrs => (
 has organism_name => (
     documentation => 'exact genus and species of organism, separated by underscore, e.g. "Solanum _ lycopersicum var. cerasiforme"',
 
-    is       => 'ro',
+    is       => 'rw',
     isa      => 'Str',
 );
 
