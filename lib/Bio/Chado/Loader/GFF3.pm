@@ -28,9 +28,11 @@ with 'MooseX::Getopt';
 #use Bio::GFF3::LowLevel  qw (gff3_parse_feature  gff3_format_feature gff3_parse_attributes);
 #use File::Basename;
 
-has schema => (
+has 'schema' => (
     is  => 'rw',
     isa => 'Bio::Chado::Schema',
+    lazy => 1,
+    builder => '_build_schema'
 );
 
 has 'file_name' => (
@@ -38,6 +40,13 @@ has 'file_name' => (
 	is        => 'rw',
 	predicate => 'has_file_name',
 	clearer   => 'clear_file_name'
+);
+
+has organism_name => (
+    documentation => 'exact species of organism, as stored in database, e.g. "Solanum lycopersicum"',
+
+    is       => 'rw',
+    isa      => 'Str',
 );
 
 has 'pragma_lines' => (
@@ -123,7 +132,7 @@ sub parse {
         next if $self->is_pragma_line($line);
         $self->parse_line($line);
     }
-    warn Dumper [ $self->features ];
+    #warn Dumper [ $self->features ];
 }
 
 =item C<parse_line ()>
@@ -173,6 +182,21 @@ sub is_pragma_line {
     return $line =~ m/^##/ ? 1 : 0;
 }
 
+=item C<organism_exists ()>
+
+Check if organism for GFF3 exists in the Chado database. Return organism::organism.organism_id if present otherwise 0. No organism should have id of 0.
+
+=cut
+
+sub organism_exists {
+    my ($self) = @_;
+    
+    my $org_id = $self->schema->resultset('Organism::Organism')-> search (
+    	{ species => $self->organism_name})->get_column('organism_id')->first();
+    return $org_id ? $org_id : 0;
+}
+
+
 ###
 1;   #do not remove
 ###
@@ -188,6 +212,6 @@ sub is_pragma_line {
 =head1 AUTHORS
 
     Jonathan "Duke" Leto	<jonathan at leto.net>
-    Surya Saha			<suryasaha at cornell.edu , @SahaSurya>   
+    Surya Saha				<suryasaha at cornell.edu , @SahaSurya>   
 
 =cut
