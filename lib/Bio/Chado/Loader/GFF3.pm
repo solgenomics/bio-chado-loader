@@ -25,8 +25,8 @@ The GFF3 spec is available online at L<http://www.sequenceontology.org/gff3.shtm
 use Moose;
 with 'MooseX::Runnable';
 with 'MooseX::Getopt';
-#use Bio::GFF3::LowLevel  qw (gff3_parse_feature  gff3_format_feature gff3_parse_attributes);
-#use File::Basename;
+use Proc::ProcessTable;
+
 
 has 'schema' => (
     is  => 'rw',
@@ -49,6 +49,13 @@ has organism_name => (
     isa      => 'Str',
 );
 
+has organism_id => (
+    documentation => 'id organism, as stored in database, e.g. 1 for Solanum lycopersicum',
+
+    is       => 'rw',
+    isa      => 'Str',
+);
+
 has 'pragma_lines' => (
 	isa       => 'ArrayRef[Str]',
 	is        => 'rw',
@@ -57,9 +64,10 @@ has 'pragma_lines' => (
 );
 
 has 'features' => (
+	documentation => 'hash of featureID or seqID => array of entire GFF record. TOFIX Partly redundant',
     is      => 'rw',
     #isa     => 'HashRef[Str]',
-    isa     => 'HashRef[ArrayRef]',
+    isa     => 'HashRef[ArrayRef]',##Use constants to get arr member
     traits  => [ 'Hash' ],
     default => sub { { } },
     handles => {
@@ -70,6 +78,7 @@ has 'features' => (
     );
     
 has 'cvterms' => (
+	documentation => 'hash of cvterm => 1. TOFIX Use counts instead of constant 1',
     is      => 'rw',
     isa     => 'HashRef[Str]',
     traits  => [ 'Hash' ],
@@ -87,6 +96,20 @@ set true if this feature should be recorded as from an analysis
     is      => 'ro',
     isa     => 'Bool',
     default => 0,
+);
+
+has 'cache' => (
+	documentation => 'hash of cvterm.name => hash of feature.uniquename => feature.feature_id,featureloc.srcfeature_id,featureloc.locgroup,featureloc.rank',
+    is      => 'rw',
+    isa     => 'HashRef',
+    default => sub { { } },
+#    traits  => [ 'Hash' ],
+    default => sub { { } },
+#    handles => {
+#        cache_exists=> 'exists',## Needed???
+#        add_cache   => 'set',
+#        count_cache => 'count',## Needed???
+#    },
 );
 
 use constant SEQID         => 0;
@@ -184,7 +207,8 @@ sub is_pragma_line {
 
 =item C<organism_exists ()>
 
-Check if organism for GFF3 exists in the Chado database. Return organism::organism.organism_id if present otherwise 0. No organism should have id of 0.
+Check if organism for GFF3 exists in the Chado database. Return organism::organism.organism_id 
+if present otherwise 0. No organism should have id of 0.
 
 =cut
 
@@ -194,6 +218,100 @@ sub organism_exists {
     my $org_id = $self->schema->resultset('Organism::Organism')-> search (
     	{ species => $self->organism_name})->get_column('organism_id')->first();
     return $org_id ? $org_id : 0;
+}
+
+=item C<populate_cache ()>
+
+Presuming organism_Populate cache hash with feature.uniquename=feature.feature_id,featureloc.srcfeature_id,
+featureloc.locgroup,featureloc.rank,cvterm.name from cvterm,feature,featureloc relations. Return number of 
+records added to cache. Count may be over estimation if some features have multiple locgroups(e.g. contigs).
+
+=cut
+
+sub populate_cache {
+    my ($self) = @_;
+    
+    #setup DB dsn's
+    my $fl_rs = $self->schema -> resultset('Sequence::Featureloc')->search(
+    	{ 'organism_id'=> $self->organism_id },
+    	{ join => [ 'feature' ] , prefetch=> [ 'feature']}
+    	);
+
+	my $ft_rs = $self->schema -> resultset('Sequence::Feature')->search(
+		{ 'organism_id'=> $self->organism_id },
+		{ join => [ 'type' ] , prefetch=> [ 'type']}
+		);
+		
+    print STDERR "created resultsets\n\n";
+    print STDERR "fl_rs count: ".$fl_rs->count()."\n";
+    print STDERR "ft_rs count: ".$ft_rs->count()."\n";
+    
+    #create cache hash
+    my $count = 0;
+    while (my $fl_row = $fl_rs->next()){
+		if($ft_rs->search(
+			{'type_id' => $fl_row->feature->type_id(), 'uniquename' => $fl_row->feature->uniquename}
+			)->count() == 1){
+			my $ft_row = $ft_rs->search(
+					{'type_id' => $fl_row->feature->type_id(), 'uniquename' => $fl_row->feature->uniquename}
+					)->first();
+
+#			$self->add_cache( {$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{feature_id} => $fl_row->feature->feature_id() );
+#			$self->add_cache( {$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{locgroup} => $fl_row->locgroup() );
+#			$self->add_cache( {$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{rank} => $fl_row->rank() );
+#			$self->add_cache( {$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{scrcfeature_id} => $fl_row->srcfeature_id() );
+			
+			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{feature_id}=$fl_row->feature->feature_id();
+			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{locgroup}=$fl_row->locgroup();
+			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{rank}=$fl_row->rank();
+			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{scrcfeature_id}=$fl_row->srcfeature_id();
+			$count++;	
+			if ($count % 10000 == 0) {
+				print STDERR "processing $count\r";
+				warn Dumper [ $self-> cache -> {$ft_row->type->name()}];
+			}
+		}
+		else{
+			die "Multiple features found for organism with same type_name and uniquename which violates Chado constraints. Exiting..";
+		}
+	}
+
+    my ( $i, $t );
+	$t = new Proc::ProcessTable;
+	foreach my $got ( @{ $t->table } ) {
+		next if not $got->pid eq $$;
+		$i = $got->size;
+	}
+	print STDERR "Memory used: ".($i / 1024 / 1024)."\n";
+	return ($count);
+}
+
+=item C<process_features ()>
+
+Compare %features to %cache. Push content to write to disk for direct copy to DB. %features not found 
+in %cache are written to exceptions.gff3. New featureloc records have locgroup=0 (primary location). Old 
+locgroups are incremented by 1.
+
+=cut
+
+sub process_features {
+    my ($self) = @_;
+    
+
+    
+}
+
+=item C<insert_features ($insert_data)>
+
+Insert content from disk intermediate file into DB   
+
+=cut
+
+sub insert_features {
+    my ($self) = @_;
+    
+    
+    
 }
 
 
