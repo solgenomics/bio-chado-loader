@@ -295,8 +295,8 @@ sub populate_cache {
 =item C<prepare_bulk_upload ()>
 
 Compare %features to %cache. Push content to write to disk for direct copy to DB. %features not found 
-in %cache are written to exceptions.gff3. New featureloc records have locgroup=0 and rank=0 (primary location).
-Old locgroups are incremented by 1.
+in %cache are written to gff3.exceptions. New featureloc records have locgroup=0 and rank=0 (primary location).
+Old locgroups for features being inserted are incremented by 1.
 
 CAVEAT: GFF values currently not handled are sequence, score and non-ID attributes. 
 
@@ -315,10 +315,7 @@ sub prepare_bulk_upload {
     $disk_cache_str=$disk_exception_str='';
     
     #warn Dumper [ $self->features ];
-    
     while (($feature_uniquename,$fields) = each %{$self->features}){
-    	#my @fields = split (/\t/, \$feature_gff);
-    	#my $attribs = { map { split (/=/, $_)  }  split (/;/, $fields[ATTRIBUTES]) };
     	my $attribs = { map { split (/=/, $_)  }  split (/;/, $fields->[ATTRIBUTES]) };
     	
     	if ($self->cache->{$fields->[TYPE]}->{$feature_uniquename}){
@@ -360,7 +357,6 @@ sub prepare_bulk_upload {
 			#warn Dumper [ $fields ];
     		
     		$disk_exception_str.=join("	", @$fields)."\n";
-    
     		$counters{'exceptions'}++;
     	}
     }
@@ -376,6 +372,9 @@ sub prepare_bulk_upload {
     	print $exception_gff_fh $disk_exception_str;
     	close($exception_gff_fh);
     }
+    
+    print STDERR $counters{'inserts'}." records prepared for insert\n";
+    print STDERR $counters{'exceptions'}." exception GFF records written to ".$self->file_name."\.exceptions \n";
     
     return $counters{'inserts'};
 }
