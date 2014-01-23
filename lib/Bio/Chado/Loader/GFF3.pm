@@ -64,7 +64,7 @@ has 'pragma_lines' => (
 );
 
 has 'features' => (
-	documentation => 'hash of featureID or seqID => array of entire GFF record. TOFIX Partly redundant',
+	documentation => 'hash of feature uniquename or seqID => array of entire GFF record. TOFIX Partly redundant',
     is      => 'rw',
     #isa     => 'HashRef[Str]',
     isa     => 'HashRef[ArrayRef]',##Use constants to get arr member
@@ -76,7 +76,14 @@ has 'features' => (
         feature_exists => 'exists',
     },
     );
-    
+
+has 'feature_ids' => (
+	documentation => 'hash of featureID => 1 for all features in GFF that will be updated',
+    is      => 'rw',
+    isa     => 'HashRef',
+    default => sub { { } }
+    );
+
 has 'cvterms' => (
 	documentation => 'hash of cvterm => 1. TOFIX Use counts instead of constant 1',
     is      => 'rw',
@@ -99,7 +106,7 @@ set true if this feature should be recorded as from an analysis
 );
 
 has 'cache' => (
-	documentation => 'hash of cvterm.name => hash of feature.uniquename => feature.feature_id,featureloc.srcfeature_id,featureloc.locgroup,featureloc.rank',
+	documentation => 'hash of cvterm.name => hash of feature.uniquename => feature.feature_id,featureloc.srcfeature_id. Not recording featureloc.locgroup,featureloc.rank',
     is      => 'rw',
     isa     => 'HashRef',
     default => sub { { } },
@@ -233,7 +240,8 @@ sub populate_cache {
     
     #setup DB dsn's
     my $fl_rs = $self->schema -> resultset('Sequence::Featureloc')->search(
-    	{ 'organism_id'=> $self->organism_id },
+#    	{ 'organism_id'=> $self->organism_id },
+		{ 'organism_id'=> 1 , 'feature.uniquename' => { 'like', '%Solyc01g1123%'}},#for testing, only 69 floc records
     	{ join => [ 'feature' ] , prefetch=> [ 'feature']}
     	);
 
@@ -241,8 +249,6 @@ sub populate_cache {
 		{ 'organism_id'=> $self->organism_id },
 		{ join => [ 'type' ] , prefetch=> [ 'type']}
 		);
-		
-    print STDERR "created resultsets\n\n";
     print STDERR "fl_rs count: ".$fl_rs->count()."\n";
     print STDERR "ft_rs count: ".$ft_rs->count()."\n";
     
@@ -262,54 +268,143 @@ sub populate_cache {
 #			$self->add_cache( {$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{scrcfeature_id} => $fl_row->srcfeature_id() );
 			
 			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{feature_id}=$fl_row->feature->feature_id();
-			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{locgroup}=$fl_row->locgroup();
-			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{rank}=$fl_row->rank();
-			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{scrcfeature_id}=$fl_row->srcfeature_id();
+#			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{locgroup}=$fl_row->locgroup();
+#			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{rank}=$fl_row->rank();
+			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{srcfeature_id}=$fl_row->srcfeature_id();
 			$count++;	
-			if ($count % 10000 == 0) {
+			if ($count % 100000 == 0) {
 				print STDERR "processing $count\r";
-				warn Dumper [ $self-> cache -> {$ft_row->type->name()}];
+				#warn Dumper [ $self-> cache -> {$ft_row->type->name()}->{$fl_row->feature->uniquename()}];
+				#warn Dumper [ $self-> cache -> {$ft_row->type->name()}];
+			    my ( $i, $t );
+				$t = new Proc::ProcessTable;
+				foreach my $got ( @{ $t->table } ) {
+					next if not $got->pid eq $$;
+					$i = $got->size;
+				}
+				print STDERR "Memory used: ".($i / 1024 / 1024)."MB \n";
 			}
 		}
 		else{
 			die "Multiple features found for organism with same type_name and uniquename which violates Chado constraints. Exiting..";
 		}
 	}
-
-    my ( $i, $t );
-	$t = new Proc::ProcessTable;
-	foreach my $got ( @{ $t->table } ) {
-		next if not $got->pid eq $$;
-		$i = $got->size;
-	}
-	print STDERR "Memory used: ".($i / 1024 / 1024)."\n";
 	return ($count);
 }
 
-=item C<process_features ()>
+=item C<prepare_bulk_upload ()>
 
 Compare %features to %cache. Push content to write to disk for direct copy to DB. %features not found 
-in %cache are written to exceptions.gff3. New featureloc records have locgroup=0 (primary location). Old 
-locgroups are incremented by 1.
+in %cache are written to exceptions.gff3. New featureloc records have locgroup=0 and rank=0 (primary location).
+Old locgroups are incremented by 1.
+
+CAVEAT: GFF values currently not handled are sequence, score and non-ID attributes. 
 
 =cut
 
-sub process_features {
+sub prepare_bulk_upload {
     my ($self) = @_;
-    
 
+    my ($disk_cache_fh,$exception_gff_fh);
+    open($disk_cache_fh,">",$self->file_name.'.disk_cache')
+    	or die("Could not create intermediate file for insert records: $!");
+        
+    #compare %features to %cache
+    my ($feature_uniquename,$fields,$feature_gff,$disk_cache_str,$disk_exception_str);
+    my %counters=('exceptions' => 0, 'inserts' => 0);
+    $disk_cache_str=$disk_exception_str='';
     
+    #warn Dumper [ $self->features ];
+    
+    while (($feature_uniquename,$fields) = each %{$self->features}){
+    	#my @fields = split (/\t/, \$feature_gff);
+    	#my $attribs = { map { split (/=/, $_)  }  split (/;/, $fields[ATTRIBUTES]) };
+    	my $attribs = { map { split (/=/, $_)  }  split (/;/, $fields->[ATTRIBUTES]) };
+    	
+    	if ($self->cache->{$fields->[TYPE]}->{$feature_uniquename}){
+    		#create intermediate file str
+    		print STDERR "Data string for $feature_uniquename\n"; 
+#    		print STDERR $self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id}."\t".
+#    			$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{srcfeature_id}."\t".
+#    			($fields->[FEATURE_START] -1)."\tf\t".$fields->[FEATURE_END]."\tf\t";
+#    		if( $fields->[STRAND] eq '+'){ print STDERR  '1'}
+#    		elsif( $fields->[STRAND] eq '-'){ print STDERR  '-1'}
+#    		else { print STDERR  '0'}#for . or ?
+#    		print STDERR "\t";
+#    		print STDERR  "\t0\t0\n";
+    		
+    		$disk_cache_str.=$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id}."\t".
+    			$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{srcfeature_id}."\t".
+    			($fields->[FEATURE_START] -1)."\tf\t".$fields->[FEATURE_END]."\tf\t";
+    		if( $fields->[STRAND] eq '+'){ $disk_cache_str.='1'}
+    		elsif( $fields->[STRAND] eq '-'){ $disk_cache_str.='-1'}
+    		else { $disk_cache_str.='0'}#for . or ?
+    		$disk_cache_str.="\t";
+    		if ($fields->[PHASE] eq '.'){ $disk_cache_str.="\t"}#for .
+    		elsif( $fields->[PHASE] >= 0 && $fields->[PHASE] <= 2){$disk_cache_str.=$fields->[PHASE]."\t"}
+    		#ignoring score and residue_info, presuming this will be the new primary feature
+    		$disk_cache_str.="0\t0\n";
+    		
+    		#record feature_ids in class var
+    		$self->feature_ids->{$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id}} = 1; 
+    		
+    		$counters{'inserts'}++;
+    		if ($counters{'inserts'}%10000 == 0){
+    			print $disk_cache_fh $disk_cache_str;
+    			$disk_cache_str='';
+    		}
+    	}
+    	else{
+    		#create exception file str
+    		print STDERR "Exception GFF record for $feature_uniquename\n";
+			#warn Dumper [ $fields ];
+    		
+    		$disk_exception_str.=join("	", @$fields)."\n";
+    
+    		$counters{'exceptions'}++;
+    	}
+    }
+    
+    #write strings to disk files
+    die "No features to update." if $counters{'inserts'} == 0;
+    print $disk_cache_fh $disk_cache_str;
+    close($disk_cache_fh);
+    
+    if($counters{'exceptions'} > 0 ){
+    	open($exception_gff_fh,">",$self->file_name.'exceptions')
+    		or die("Could not create exception gff file: $!");
+    	print $exception_gff_fh $disk_exception_str;
+    	close($exception_gff_fh);
+    }
+    
+    return $counters{'inserts'};
 }
 
-=item C<insert_features ($insert_data)>
+=item C<bulk_upload ()>
 
-Insert content from disk intermediate file into DB   
+Insert content from disk intermediate file into DB using transactions. DB remains unmodified in case of update error.
 
 =cut
 
-sub insert_features {
+sub bulk_upload {
     my ($self) = @_;
     
+    my $fl_rs = $self->schema -> resultset('Sequence::Featureloc')->search(
+		{ 'feature_id'=> \$self->feature_ids },
+		{ 'order_by' => { -desc => [qw/feature_id locgroup/]}}
+		);
+	
+	#update locgroup=locgroup+1
+	my $increment_locgroup_sql = sub {
+		while (my $fl_row = $fl_rs->next()){
+			$fl_row->set_column('locgroup' => ($fl_row->get_column('locgroup') + 1));
+			$fl_row->update();
+		}
+		
+		#$schema->txn_do($coderef2); # Can have a nested transaction. for INSERT
+	};
+    
+    #read intermediate file and insert rows into featureloc
     
     
 }
