@@ -20,8 +20,8 @@ sub TEST_ITAG1_GENOMIC_REF : Test(3) {
     );
     isa_ok($loader, 'Bio::Chado::Loader::GFF3');
     $loader->parse();
-    is($loader->count_cvterms, 2, 'found 2 unique cvterms');
-    is($loader->count_features, 4, 'found 4 unique features');
+    is($loader->count_cvterms_gff, 2, 'found 2 unique cvterms');
+    is($loader->count_features_gff, 4, 'found 4 unique features');
 }
 
 sub TEST_CANONICAL_GENE : Tests {
@@ -29,16 +29,16 @@ sub TEST_CANONICAL_GENE : Tests {
         file_name => "t/data/canonical_gene.gff3",
     );
     $loader->parse();
-    is($loader->count_cvterms, 5, 'found 5 unique cvterms');
-    is($loader->count_features, 14, 'found 14 unique features');
+    is($loader->count_cvterms_gff, 5, 'found 5 unique cvterms');
+    is($loader->count_features_gff, 14, 'found 14 unique features');
 
-    cmp_set( [ keys %{$loader->features} ], [ qw/
+    cmp_set( [ keys %{$loader->features_gff} ], [ qw/
         cds00001 cds00002 cds00003 cds00004
         exon00001 exon00002 exon00003 exon00004 exon00005
         gene00001 mRNA00001 mRNA00002 mRNA00003 tfbs00001/ ],
         'Found expected features',
     );
-    cmp_set( [ keys %{$loader->cvterms} ], [ qw/
+    cmp_set( [ keys %{$loader->cvterms_gff} ], [ qw/
         CDS TF_binding_site exon gene mRNA/ ],
         'Found expected cvterms',
     );
@@ -49,10 +49,10 @@ sub TEST_Solyc01g112300_2 : Test(4) {
         file_name => "t/data/Solyc01g112300.2.gff3",
     );
     $loader->parse();
-    is($loader->count_cvterms, 7, 'found 7 unique cvterms');
-    is($loader->count_features, 12, 'found 12 unique features');
+    is($loader->count_cvterms_gff, 7, 'found 7 unique cvterms');
+    is($loader->count_features_gff, 12, 'found 12 unique features');
 
-    cmp_set( [ keys %{$loader->features} ], [ qw/
+    cmp_set( [ keys %{$loader->features_gff} ], [ qw/
         gene:Solyc01g112300.2 mRNA:Solyc01g112300.2.1
         exon:Solyc01g112300.2.1.1 five_prime_UTR:Solyc01g112300.2.1.0
         CDS:Solyc01g112300.2.1.1 intron:Solyc01g112300.2.1.1
@@ -61,7 +61,7 @@ sub TEST_Solyc01g112300_2 : Test(4) {
         CDS:Solyc01g112300.2.1.3 three_prime_UTR:Solyc01g112300.2.1.0/ ],
         'Found expected features',
     );
-    cmp_set( [ keys %{$loader->cvterms} ], [ qw/
+    cmp_set( [ keys %{$loader->cvterms_gff} ], [ qw/
         CDS five_prime_UTR three_prime_UTR exon intron gene mRNA/ ],
         'Found expected cvterms',
     );
