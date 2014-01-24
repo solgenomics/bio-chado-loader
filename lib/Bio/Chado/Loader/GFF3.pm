@@ -17,6 +17,9 @@ Bio::Chado::Loader::GFF3 - Load GFF3 files into the Chado database schema
 This is a MooseX::Runnable class that loads feature data given in GFF3 format into a Chado schema.
 The GFF3 spec is available online at L<http://www.sequenceontology.org/gff3.shtml>
 
+CAVEAT
+Will break if no ID field in attributes in GFF record
+
 =over
 
 =cut
@@ -26,7 +29,8 @@ use Moose;
 with 'MooseX::Runnable';
 with 'MooseX::Getopt';
 use Proc::ProcessTable;
-
+require Bio::GFF3::LowLevel;
+use Bio::GFF3::LowLevel  qw (gff3_parse_feature  gff3_format_feature gff3_parse_attributes);
 
 has 'schema' => (
     is  => 'rw',
@@ -44,14 +48,12 @@ has 'file_name' => (
 
 has organism_name => (
     documentation => 'exact species of organism, as stored in database, e.g. "Solanum lycopersicum"',
-
     is       => 'rw',
     isa      => 'Str',
 );
 
 has organism_id => (
     documentation => 'id organism, as stored in database, e.g. 1 for Solanum lycopersicum',
-
     is       => 'rw',
     isa      => 'Str',
 );
@@ -63,60 +65,68 @@ has 'pragma_lines' => (
 	clearer   => 'clear_pragma_lines'
 );
 
-has 'features' => (
-	documentation => 'hash of feature uniquename or seqID => array of entire GFF record. TOFIX Partly redundant',
-    is      => 'rw',
-    #isa     => 'HashRef[Str]',
-    isa     => 'HashRef[ArrayRef]',##Use constants to get arr member
-    traits  => [ 'Hash' ],
+has 'features_gff' => (
+	documentation => 'hash of feature uniquename => hashref of entire GFF record via . Will break if no ID field in GFF record',
+    is      => 'ro',
+    isa     => 'HashRef',
+    traits	=> ['Hash'],
     default => sub { { } },
     handles => {
-        add_feature    => 'set',
-        count_features => 'count',
-        feature_exists => 'exists',
+        add_features_gff    => 'set',
+        count_features_gff => 'count',
+        features_gff_exists => 'exists',
     },
     );
 
-has 'feature_ids' => (
-	documentation => 'hash of featureID => 1 for all features in GFF that will be updated',
-    is      => 'rw',
+has 'feature_ids_gff' => (
+	documentation => 'hash of featureID => 1 for all features in GFF that will be updated. Populated in populate_cache',
+    is      => 'ro',
     isa     => 'HashRef',
-    default => sub { { } }
+    traits	=> ['Hash'],
+    default => sub { { } },
+    handles => {
+        add_feature_ids_gff    => 'set',
+        count_feature_ids_gff => 'count',
+    },
     );
 
-has 'cvterms' => (
-	documentation => 'hash of cvterm => 1. TOFIX Use counts instead of constant 1',
-    is      => 'rw',
+has 'cvterms_gff' => (
+	documentation => 'hash of cvterm => 1 from GFF. TOFIX Use counts instead of constant 1',
+    is      => 'ro',
     isa     => 'HashRef[Str]',
     traits  => [ 'Hash' ],
     default => sub { { } },
     handles => {
-        add_cvterm    => 'set',
-        count_cvterms => 'count',
+        add_cvterms_gff    => 'set',
+        count_cvterms_gff => 'count',
     },
 );
 
 has 'is_analysis' => (
-    documentation => <<'',
-set true if this feature should be recorded as from an analysis
-
-    is      => 'ro',
+    documentation => 'set true if this feature should be recorded as from an analysis',
+    is      => 'rw',
     isa     => 'Bool',
     default => 0,
 );
 
 has 'cache' => (
 	documentation => 'hash of cvterm.name => hash of feature.uniquename => feature.feature_id,featureloc.srcfeature_id. Not recording featureloc.locgroup,featureloc.rank',
-    is      => 'rw',
+    is      => 'ro',
     isa     => 'HashRef',
     default => sub { { } },
-#    traits  => [ 'Hash' ],
+);
+
+has 'feature_uniquename_cache' => (
+	documentation => 'hash of feature uniquenames => 1 for all features in cache',
+    is      => 'ro',
+    isa     => 'HashRef',
+	traits	=> ['Hash'],
     default => sub { { } },
-#    handles => {
-#        cache_exists=> 'exists',## Needed???
-#        add_cache   => 'set',
-#        count_cache => 'count',## Needed???
-#    },
+	handles => {
+        add_feature_uniquename_cache    => 'set',
+        count_feature_uniquename_cache => 'count',
+        feature_uniquename_cache_exists => 'exists'
+    },
 );
 
 use constant SEQID         => 0;
@@ -162,25 +172,31 @@ sub parse {
         next if $self->is_pragma_line($line);
         $self->parse_line($line);
     }
-    #warn Dumper [ $self->features ];
 }
 
 =item C<parse_line ()>
 
-Parse a GFF3 line to get feature details.
+Parse a GFF3 line to get feature details. 
+
+CAVEAT
+Will break if no ID field
 
 =cut
 
 sub parse_line {
     my ($self, $line) = @_;
-    my @fields = split (/\t/, $line);
-    my $attribs = { map { split (/=/, $_)  }  split (/;/, $fields[ATTRIBUTES]) };
-
-    $self->add_cvterm( $fields[TYPE]   => 1 );
-    #$self->add_feature( $attribs->{ID} || $fields[SEQID] => 1 );
-    $self->add_feature( $attribs->{ID} || $fields[SEQID] => \@fields );
-
-    $self->_validate_parents($attribs);
+    my $gff_line_hash = gff3_parse_feature($line);
+    
+    #warn Dumper [$gff_line_hash];
+    
+    #validate parents
+    if (exists $gff_line_hash->{'attributes'}->{'Parent'}){
+		$self->_validate_parents($gff_line_hash->{'attributes'}->{'Parent'}->[0]);    	
+    }
+    
+    # add data, Will break if no ID field
+    $self->add_features_gff( $gff_line_hash->{'attributes'}->{'ID'}->[0] => $gff_line_hash);
+    $self->add_cvterms_gff( $gff_line_hash->{'type'} => 1 );
 }
 
 =item C<_validate_parents ()>
@@ -191,11 +207,10 @@ Check if parent feature exists
 
 
 sub _validate_parents {
-    my ($self, $attribs) = @_;
-    return unless $attribs->{Parent};
-    my (@parents) = split (/,/, $attribs->{Parent});
+	my ($self, $parents) = @_;
+    my (@parents) = split (/,/, $parents);
     for my $p (@parents) {
-        unless ( $self->feature_exists( $p ) ) {
+        unless ( $self->features_gff_exists( $p ) || $self->feature_uniquename_cache_exists( $p )) {
             die "$p is an unknown Parent!";
         }
     }
@@ -229,7 +244,7 @@ sub organism_exists {
 
 =item C<populate_cache ()>
 
-Presuming organism_Populate cache hash with feature.uniquename=feature.feature_id,featureloc.srcfeature_id,
+Populate cache hash with feature.uniquename=feature.feature_id,featureloc.srcfeature_id,
 featureloc.locgroup,featureloc.rank,cvterm.name from cvterm,feature,featureloc relations. Return number of 
 records added to cache. Count may be over estimation if some features have multiple locgroups(e.g. contigs).
 
@@ -262,15 +277,13 @@ sub populate_cache {
 					{'type_id' => $fl_row->feature->type_id(), 'uniquename' => $fl_row->feature->uniquename}
 					)->first();
 
-#			$self->add_cache( {$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{feature_id} => $fl_row->feature->feature_id() );
-#			$self->add_cache( {$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{locgroup} => $fl_row->locgroup() );
-#			$self->add_cache( {$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{rank} => $fl_row->rank() );
-#			$self->add_cache( {$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{scrcfeature_id} => $fl_row->srcfeature_id() );
-			
 			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{feature_id}=$fl_row->feature->feature_id();
 #			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{locgroup}=$fl_row->locgroup();
 #			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{rank}=$fl_row->rank();
 			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{srcfeature_id}=$fl_row->srcfeature_id();
+			
+			$self->add_feature_uniquename_cache( $fl_row->feature->uniquename() => 1 );
+			
 			$count++;	
 			if ($count % 100000 == 0) {
 				print STDERR "processing $count\r";
@@ -315,7 +328,7 @@ sub prepare_bulk_upload {
     $disk_cache_str=$disk_exception_str='';
     
     #warn Dumper [ $self->features ];
-    while (($feature_uniquename,$fields) = each %{$self->features}){
+    while (($feature_uniquename,$fields) = each %{$self->features_gff}){
     	my $attribs = { map { split (/=/, $_)  }  split (/;/, $fields->[ATTRIBUTES]) };
     	
     	if ($self->cache->{$fields->[TYPE]}->{$feature_uniquename}){
@@ -343,7 +356,8 @@ sub prepare_bulk_upload {
     		$disk_cache_str.="0\t0\n";
     		
     		#record feature_ids in class var
-    		$self->feature_ids->{$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id}} = 1; 
+    		$self->add_feature_ids_gff( $self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id} => 1 );
+    		#$self->feature_ids->{$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id}} = 1; 
     		
     		$counters{'inserts'}++;
     		if ($counters{'inserts'}%10000 == 0){
