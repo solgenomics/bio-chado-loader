@@ -58,7 +58,7 @@ sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(8){
 	ok(my $cnt = $loader->populate_cache(), 'populated cache');
 	print STDERR 'Cache has '.$cnt."\n";
 	run_time(); mem_used();
-    dies_ok sub { $loader->parse() }, qr/mRNA:dummySolyc01g112300.2.1 is an unknown Parent/;
+    dies_ok sub { $loader->parse() }, qr/dummy is an unknown Parent/;
 }
 
 #sub TEST_DB_CACHE_INSERT : Test(12){
