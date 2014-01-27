@@ -267,8 +267,8 @@ sub populate_cache {
     #setup DB dsn's
     my $fl_rs = $self->schema -> resultset('Sequence::Featureloc')->search(
 #    	{ 'organism_id'=> $self->organism_id },
-#		{ 'organism_id'=> 1 , 'feature.uniquename' => { 'like', '%Solyc01g1123%'}},#for testing, only 69 floc records
-		{ 'organism_id'=> 1 , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only 2 floc records
+		{ 'organism_id'=> 1 , 'feature.uniquename' => { 'like', '%Solyc01g1123%'}},#for testing, only 69 floc records
+#		{ 'organism_id'=> 1 , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only 2 floc records
     	{ join => [ 'feature' ] , prefetch=> [ 'feature']}
     	);
 
