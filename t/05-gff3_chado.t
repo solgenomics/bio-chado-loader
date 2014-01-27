@@ -23,43 +23,43 @@ sub run_time {
 	print STDERR "User time for process: $user_t\n\n";
 }
 
-#sub TEST_DB_CONNECT : Test(4){
-#	my $loader = Bio::Chado::Loader::GFF3->new();
-#	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
-#	ok($loader->db_user('test_usr'),'assigned user');
-#	ok($loader->db_pass('test_usr'),'assigned pw');
-#    is($loader->schema->resultset('Sequence::Feature')->count,2589668,'got correct nof rows in feature table');
-#}
-#
-#sub TEST_DB_QUERY : Test(7){
-#	my $loader = Bio::Chado::Loader::GFF3->new();
-#	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
-#	ok($loader->db_user('test_usr'),'assigned user');
-#	ok($loader->db_pass('test_usr'),'assigned pw');
-#	ok($loader->organism_name('Solanum lycopersicum'), 'assigned org name');
-#	is($loader->organism_exists() , 1, 'got correct org id from org table');
-#	ok($loader->organism_name('Platostoma coeruleum'), 'assigned org name');
-#	is($loader->organism_exists() , 2363,'got correct org id from org table');
-#}
+sub TEST_DB_CONNECT : Test(4){
+	my $loader = Bio::Chado::Loader::GFF3->new();
+	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
+	ok($loader->db_user('test_usr'),'assigned user');
+	ok($loader->db_pass('test_usr'),'assigned pw');
+    is($loader->schema->resultset('Sequence::Feature')->count,2589668,'got correct nof rows in feature table');
+}
 
-#sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(8){
-#	my $loader = Bio::Chado::Loader::GFF3->new(
-#        file_name => "t/data/db_unknown_parent.gff3",
-#    );
-#    
-#    #Create cache first and then parse GFF 
-#	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
-#	ok($loader->db_user('postgres'),'assigned user');
-#	ok($loader->db_pass('Eo0vair1'),'assigned pw');
-#	ok($loader->organism_name('Solanum lycopersicum'), 'assigned org name');
-#	is($loader->organism_exists() , 1, 'got correct org id from org table');
-#	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
-#	run_time(); mem_used();
-#	ok(my $cnt = $loader->populate_cache(), 'populated cache');
-#	print STDERR 'Cache has '.$cnt."\n";
-#	run_time(); mem_used();
-#    dies_ok sub { $loader->parse() }, qr/dummy is an unknown Parent/;
-#}
+sub TEST_DB_QUERY : Test(7){
+	my $loader = Bio::Chado::Loader::GFF3->new();
+	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
+	ok($loader->db_user('test_usr'),'assigned user');
+	ok($loader->db_pass('test_usr'),'assigned pw');
+	ok($loader->organism_name('Solanum lycopersicum'), 'assigned org name');
+	is($loader->organism_exists() , 1, 'got correct org id from org table');
+	ok($loader->organism_name('Platostoma coeruleum'), 'assigned org name');
+	is($loader->organism_exists() , 2363,'got correct org id from org table');
+}
+
+sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(8){
+	my $loader = Bio::Chado::Loader::GFF3->new(
+        file_name => "t/data/db_unknown_parent.gff3",
+    );
+    
+    #Create cache first and then parse GFF 
+	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
+	ok($loader->db_user('postgres'),'assigned user');
+	ok($loader->db_pass('Eo0vair1'),'assigned pw');
+	ok($loader->organism_name('Solanum lycopersicum'), 'assigned org name');
+	is($loader->organism_exists() , 1, 'got correct org id from org table');
+	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
+	run_time(); mem_used();
+	ok(my $cnt = $loader->populate_cache(), 'populated cache');
+	print STDERR 'Cache has '.$cnt."\n";
+	run_time(); mem_used();
+    dies_ok sub { $loader->parse() }, qr/dummy is an unknown Parent/;
+}
 
 sub TEST_DB_CACHE_INSERT : Test(13){
 	my $loader = Bio::Chado::Loader::GFF3->new(
