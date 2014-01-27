@@ -31,6 +31,7 @@ with 'MooseX::Getopt';
 use Proc::ProcessTable;
 require Bio::GFF3::LowLevel;
 use Bio::GFF3::LowLevel  qw (gff3_parse_feature  gff3_format_feature gff3_parse_attributes);
+use Try::Tiny;
 
 has 'schema' => (
     is  => 'rw',
@@ -46,13 +47,13 @@ has 'file_name' => (
 	clearer   => 'clear_file_name'
 );
 
-has organism_name => (
+has 'organism_name' => (
     documentation => 'exact species of organism, as stored in database, e.g. "Solanum lycopersicum"',
     is       => 'rw',
     isa      => 'Str',
 );
 
-has organism_id => (
+has 'organism_id' => (
     documentation => 'id organism, as stored in database, e.g. 1 for Solanum lycopersicum',
     is       => 'rw',
     isa      => 'Str',
@@ -66,7 +67,7 @@ has 'pragma_lines' => (
 );
 
 has 'features_gff' => (
-	documentation => 'hash of feature uniquename => hashref of entire GFF record via . Will break if no ID field in GFF record',
+	documentation => 'hash of feature uniquename => hashref of entire GFF record via . It will break if no ID field in GFF record. uniquenames are used for key since GFF3 mandates they be unique in a GFF3 file.',
     is      => 'ro',
     isa     => 'HashRef',
     traits	=> ['Hash'],
@@ -76,19 +77,19 @@ has 'features_gff' => (
         count_features_gff => 'count',
         features_gff_exists => 'exists',
     },
-    );
+);
 
-has 'feature_ids_gff' => (
-	documentation => 'hash of featureID => 1 for all features in GFF that will be updated. Populated in populate_cache',
+has 'feature_ids_uniquenames_gff' => (
+	documentation => 'hash of featureID => feature_uniquename for all features in GFF that will be updated. Populated in prepare_bulk_upload',
     is      => 'ro',
     isa     => 'HashRef',
     traits	=> ['Hash'],
     default => sub { { } },
     handles => {
-        add_feature_ids_gff    => 'set',
-        count_feature_ids_gff => 'count',
+        add_feature_ids_uniquenames_gff    => 'set',
+        count_feature_ids_uniquenames_gff => 'count',
     },
-    );
+);
 
 has 'cvterms_gff' => (
 	documentation => 'hash of cvterm => 1 from GFF. TOFIX Use counts instead of constant 1',
@@ -178,8 +179,7 @@ sub parse {
 
 Parse a GFF3 line to get feature details. 
 
-CAVEAT
-Will break if no ID field
+CAVEAT: This will break if no ID field is present
 
 =cut
 
@@ -195,8 +195,16 @@ sub parse_line {
     }
     
     # add data, Will break if no ID field
-    $self->add_features_gff( $gff_line_hash->{'attributes'}->{'ID'}->[0] => $gff_line_hash);
-    $self->add_cvterms_gff( $gff_line_hash->{'type'} => 1 );
+    if ( $self->features_gff_exists($gff_line_hash->{'attributes'}->{'ID'}->[0]) ){
+    	die "Multiple features with same ID found. Exiting..";
+    }
+    elsif (!defined $gff_line_hash->{'attributes'}->{'ID'}->[0]){
+    	die "No ID defined for feature in GFF. Exiting..";
+    }
+    else{
+	    $self->add_features_gff( $gff_line_hash->{'attributes'}->{'ID'}->[0] => $gff_line_hash);
+	    $self->add_cvterms_gff( $gff_line_hash->{'type'} => 1 );	
+    }
 }
 
 =item C<_validate_parents ()>
@@ -245,8 +253,11 @@ sub organism_exists {
 =item C<populate_cache ()>
 
 Populate cache hash with feature.uniquename=feature.feature_id,featureloc.srcfeature_id,
-featureloc.locgroup,featureloc.rank,cvterm.name from cvterm,feature,featureloc relations. Return number of 
-records added to cache. Count may be over estimation if some features have multiple locgroups(e.g. contigs).
+featureloc.locgroup,featureloc.rank,cvterm.name from cvterm,feature,featureloc relations. 
+Return number of records added to cache. Call function before parse() in case parents are
+not in GFF but in DB already.  
+
+CAVEAT: Count may be over estimation if some features have multiple locgroups(e.g. contigs).
 
 =cut
 
@@ -256,7 +267,8 @@ sub populate_cache {
     #setup DB dsn's
     my $fl_rs = $self->schema -> resultset('Sequence::Featureloc')->search(
 #    	{ 'organism_id'=> $self->organism_id },
-		{ 'organism_id'=> 1 , 'feature.uniquename' => { 'like', '%Solyc01g1123%'}},#for testing, only 69 floc records
+#		{ 'organism_id'=> 1 , 'feature.uniquename' => { 'like', '%Solyc01g1123%'}},#for testing, only 69 floc records
+		{ 'organism_id'=> 1 , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only 2 floc records
     	{ join => [ 'feature' ] , prefetch=> [ 'feature']}
     	);
 
@@ -307,85 +319,59 @@ sub populate_cache {
 
 =item C<prepare_bulk_upload ()>
 
-Compare %features to %cache. Push content to write to disk for direct copy to DB. %features not found 
-in %cache are written to gff3.exceptions. New featureloc records have locgroup=0 and rank=0 (primary location).
-Old locgroups for features being inserted are incremented by 1.
+Compare %features from GFF to %cache. Prepare data structures to write to DB. GFF %features 
+not found in %cache are written to gff3.exceptions. New featureloc records have locgroup=0 and 
+rank=0 (primary location). Old locgroups for features being inserted are incremented by 1.
 
-CAVEAT: GFF values currently not handled are sequence, score and non-ID attributes. 
+CAVEAT: GFF values currently not handled are sequence. Only new featureloc's are handled right now.
 
 =cut
 
 sub prepare_bulk_upload {
     my ($self) = @_;
 
-    my ($disk_cache_fh,$exception_gff_fh);
-    open($disk_cache_fh,">",$self->file_name.'.disk_cache')
-    	or die("Could not create intermediate file for insert records: $!");
-        
     #compare %features to %cache
-    my ($feature_uniquename,$fields,$feature_gff,$disk_cache_str,$disk_exception_str);
+    my ($feature_uniquename,$fields,$feature_gff,$disk_exception_str);
     my %counters=('exceptions' => 0, 'inserts' => 0);
-    $disk_cache_str=$disk_exception_str='';
+    $disk_exception_str='';
     
     #warn Dumper [ $self->features ];
     while (($feature_uniquename,$fields) = each %{$self->features_gff}){
-    	my $attribs = { map { split (/=/, $_)  }  split (/;/, $fields->[ATTRIBUTES]) };
     	
-    	if ($self->cache->{$fields->[TYPE]}->{$feature_uniquename}){
+    	if ($self->cache->{$fields->{'type'}}->{$feature_uniquename}){
     		#create intermediate file str
-    		print STDERR "Data string for $feature_uniquename\n"; 
-#    		print STDERR $self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id}."\t".
-#    			$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{srcfeature_id}."\t".
-#    			($fields->[FEATURE_START] -1)."\tf\t".$fields->[FEATURE_END]."\tf\t";
-#    		if( $fields->[STRAND] eq '+'){ print STDERR  '1'}
-#    		elsif( $fields->[STRAND] eq '-'){ print STDERR  '-1'}
-#    		else { print STDERR  '0'}#for . or ?
-#    		print STDERR "\t";
-#    		print STDERR  "\t0\t0\n";
-    		
-    		$disk_cache_str.=$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id}."\t".
-    			$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{srcfeature_id}."\t".
-    			($fields->[FEATURE_START] -1)."\tf\t".$fields->[FEATURE_END]."\tf\t";
-    		if( $fields->[STRAND] eq '+'){ $disk_cache_str.='1'}
-    		elsif( $fields->[STRAND] eq '-'){ $disk_cache_str.='-1'}
-    		else { $disk_cache_str.='0'}#for . or ?
-    		$disk_cache_str.="\t";
-    		if ($fields->[PHASE] eq '.'){ $disk_cache_str.="\t"}#for .
-    		elsif( $fields->[PHASE] >= 0 && $fields->[PHASE] <= 2){$disk_cache_str.=$fields->[PHASE]."\t"}
-    		#ignoring score and residue_info, presuming this will be the new primary feature
-    		$disk_cache_str.="0\t0\n";
+    		#print STDERR "Data string for $feature_uniquename\n"; 
     		
     		#record feature_ids in class var
-    		$self->add_feature_ids_gff( $self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id} => 1 );
-    		#$self->feature_ids->{$self->cache->{$fields->[TYPE]}->{$feature_uniquename}->{feature_id}} = 1; 
-    		
+    		$self->add_feature_ids_uniquenames_gff( $self->cache->{$fields->{'type'}}->{$feature_uniquename}->{feature_id} 
+    			=> $fields->{'attributes'}->{'ID'}->[0]);
+
     		$counters{'inserts'}++;
     		if ($counters{'inserts'}%10000 == 0){
-    			print $disk_cache_fh $disk_cache_str;
-    			$disk_cache_str='';
+    			print STDERR "\r".$counters{'inserts'}." processed..\n";
     		}
     	}
     	else{
     		#create exception file str
-    		print STDERR "Exception GFF record for $feature_uniquename\n";
+    		#print STDERR "Exception GFF record for $feature_uniquename\n";
 			#warn Dumper [ $fields ];
     		
-    		$disk_exception_str.=join("	", @$fields)."\n";
+    		#$disk_exception_str.=join("	", @$fields)."\n";
+    		$disk_exception_str.=gff3_format_feature($fields);
     		$counters{'exceptions'}++;
     	}
     }
-    
-    #write strings to disk files
     die "No features to update." if $counters{'inserts'} == 0;
-    print $disk_cache_fh $disk_cache_str;
-    close($disk_cache_fh);
     
     if($counters{'exceptions'} > 0 ){
+    	my ($exception_gff_fh);
     	open($exception_gff_fh,">",$self->file_name.'exceptions')
     		or die("Could not create exception gff file: $!");
     	print $exception_gff_fh $disk_exception_str;
     	close($exception_gff_fh);
     }
+    
+    #warn Dumper [ $self->feature_ids_uniquenames_gff];
     
     print STDERR $counters{'inserts'}." records prepared for insert\n";
     print STDERR $counters{'exceptions'}." exception GFF records written to ".$self->file_name."\.exceptions \n";
@@ -395,33 +381,121 @@ sub prepare_bulk_upload {
 
 =item C<bulk_upload ()>
 
-Insert content from disk intermediate file into DB using transactions. DB remains unmodified in case of update error.
+Insert content from in-memory data structures into DB using transactions. DB remains unmodified in case of update error.
 
 =cut
 
 sub bulk_upload {
     my ($self) = @_;
     
+#   From current bulk loader - @tables array sets the order for which things will be inserted into the database
+#	my @tables = (
+#	   "organism", #dgg
+#	   "analysis", #dgg
+#	   "db", ## dgg
+#	   "dbxref",
+#	   "cv", ## dgg
+#	   "cvterm", ## dgg
+#	   "feature",
+#	   "featureloc",
+#	   "feature_relationship",
+#	   "featureprop",
+#	   "feature_cvterm",
+#	   "synonym",
+#	   "feature_synonym",
+#	   "feature_dbxref",
+#	   "analysisfeature",
+#	);
+	
+    $self->bulk_featureloc_upload();
+}
+
+=item C<bulk_featureloc_upload ()>
+
+Insert content into featureloc from in-memory data structures into DB using transactions. 
+DB remains unmodified in case of update error.
+
+CAVEAT:
+Gets srcfeature_id from cache which is incorrect if parent was changed
+Presuming that new location is the primary location of feature (locgroup=0, rank=0)
+
+=cut
+
+sub bulk_featureloc_upload {
+    my ($self) = @_;
+    
+    #$self->schema->storage->debug(1);##SQL statement
+    #warn Dumper[keys $self->feature_ids_uniquenames_gff];
+    my @feature_ids_to_update = keys ($self->feature_ids_uniquenames_gff);
     my $fl_rs = $self->schema -> resultset('Sequence::Featureloc')->search(
-		{ 'feature_id'=> \$self->feature_ids },
+		{ 'feature_id'=>  \@feature_ids_to_update},
 		{ 'order_by' => { -desc => [qw/feature_id locgroup/]}}
 		);
 	
+	#create new rows
+	my $create_sql = sub {
+		my $counter=0;
+		while ( my ($feature_id,$feature_uniquename) = each $self->feature_ids_uniquenames_gff){
+			my ($strand,$phase);
+			
+			if( $self->features_gff->{$feature_uniquename}->{'strand'} eq '+'){ $strand =1;}
+    		elsif( $self->features_gff->{$feature_uniquename}->{'strand'} eq '-'){ $strand =-1;}
+    		else { $strand=0;}
+    		
+    		if ($self->features_gff->{$feature_uniquename}->{'phase'}){
+				$fl_rs->create({
+						'feature_id' => $feature_id,
+						#getting srcfeature_id from cache which is incorrect if parent was changed
+						'srcfeature_id' => $self->cache->{$self->features_gff->{$feature_uniquename}->{'type'}}
+							->{$feature_uniquename}->{srcfeature_id},
+						'fmin' => $self->features_gff->{$feature_uniquename}->{'start'} -1,
+						'fmax' => $self->features_gff->{$feature_uniquename}->{'end'},
+						'strand' => $strand,
+						'phase' => $self->features_gff->{$feature_uniquename}->{'phase'},
+						'locgroup' => 0,
+						'rank' => 0,
+					});	
+    		}
+    		else{
+				$fl_rs->create({
+						'feature_id' => $feature_id,
+						#getting srcfeature_id from cache which is incorrect if parent was changed
+						'srcfeature_id' => $self->cache->{$self->features_gff->{$feature_uniquename}->{'type'}}
+							->{$feature_uniquename}->{srcfeature_id},
+						'fmin' => $self->features_gff->{$feature_uniquename}->{'start'} -1,
+						'fmax' => $self->features_gff->{$feature_uniquename}->{'end'},
+						'strand' => $strand,
+						'locgroup' => 0,
+						'rank' => 0,
+					});	
+    		}
+		$counter++;
+		}
+		print STDERR "$counter rows added to featureloc\n";
+	};
+	
 	#update locgroup=locgroup+1
 	my $increment_locgroup_sql = sub {
+		my $counter=0;
 		while (my $fl_row = $fl_rs->next()){
 			$fl_row->set_column('locgroup' => ($fl_row->get_column('locgroup') + 1));
 			$fl_row->update();
+			$counter++;
 		}
-		
-		#$schema->txn_do($coderef2); # Can have a nested transaction. for INSERT
+		print STDERR "$counter featureloc rows locgroup fields updated\n";
+		$self->schema->txn_do($create_sql); # nested transaction for create
 	};
     
-    #read intermediate file and insert rows into featureloc
-    
+    #update locgroups and insert rows into featureloc using transactions
+    try {
+		$self->schema->txn_do($increment_locgroup_sql);
+	} catch {# Transaction failed
+		die "Could not increment locgroups and/or create new rows. Error: $!" if ($_ =~ /Rollback failed/);# Rollback failed
+		#deal_with_failed_transaction();
+		print STDERR "Error: ".$_;
+	};
     
 }
-
 
 ###
 1;   #do not remove
