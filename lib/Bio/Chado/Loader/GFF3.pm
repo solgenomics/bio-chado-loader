@@ -130,16 +130,6 @@ has 'feature_uniquename_cache' => (
     },
 );
 
-use constant SEQID         => 0;
-use constant SOURCE        => 1;
-use constant TYPE          => 2;
-use constant FEATURE_START => 3;
-use constant FEATURE_END   => 4;
-use constant SCORE         => 5;
-use constant STRAND        => 6;
-use constant PHASE         => 7;
-use constant ATTRIBUTES    => 8;
-
 with 'Bio::Chado::Loader';
 
 use autodie qw(:all);
