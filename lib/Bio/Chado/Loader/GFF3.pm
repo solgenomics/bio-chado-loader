@@ -61,13 +61,6 @@ has 'organism_id' => (
     isa      => 'Str',
 );
 
-has 'pragma_lines' => (
-	isa       => 'ArrayRef[Str]',
-	is        => 'rw',
-	predicate => 'has_pragma_lines',
-	clearer   => 'clear_pragma_lines'
-);
-
 has 'features_gff' => (
 	documentation => 'hash of feature uniquename => hashref of entire GFF record via . It will break if no ID field in GFF record. uniquenames are used for key since GFF3 mandates they be unique in a GFF3 file.',
     is      => 'ro',
@@ -194,14 +187,6 @@ sub parse {
 			die 'this should never happen!';
 		}
 	}
-
-#    open my $fh, "<", $self->file_name;
-#    while( my $line = <$fh> ) {
-#        next if $line =~ m/^\s*$/;
-#        chomp $line;
-#        next if $self->is_pragma_line($line);
-#        $self->parse_line($line);
-#    }
 }
 
 =item C<parse_feature ()>
@@ -218,11 +203,6 @@ sub parse_feature {
     
     #warn Dumper [$self];
     #warn Dumper [ $feature_hash];
-
-    #validate parents NO NEED NOW
-#    if (exists $feature_hash->{'attributes'}->{'Parent'}){
-#		$self->_validate_parents($feature_hash->{'attributes'}->{'Parent'}->[0]);    	
-#    }
     
     # add data, Will exit if no ID field
     if ( $self->features_gff_exists($feature_hash->{'attributes'}->{'ID'}->[0]) ){
@@ -249,34 +229,6 @@ sub parse_feature {
 			parse_feature( $self,$feature_derived->[0]);
 		}
 	}
-}
-
-=item C<_validate_parents ()>
-
-Check if parent feature exists
-
-=cut
-
-
-sub _validate_parents {
-	my ($self, $parents) = @_;
-    my (@parents) = split (/,/, $parents);
-    for my $p (@parents) {
-        unless ( $self->features_gff_exists( $p ) || $self->feature_uniquename_cache_exists( $p )) {
-            die "$p is an unknown Parent!";
-        }
-    }
-}
-
-=item C<is_pragma_line ()>
-
-Check if line is a pragma
-
-=cut
-
-sub is_pragma_line {
-    my ($self, $line) = @_;
-    return $line =~ m/^##/ ? 1 : 0;
 }
 
 =item C<organism_exists ()>
