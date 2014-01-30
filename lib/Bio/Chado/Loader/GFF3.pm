@@ -24,13 +24,15 @@ Will break if no ID field in attributes in GFF record
 
 =cut
 
+require Bio::GFF3::LowLevel::Parser;
+
 
 use Moose;
 with 'MooseX::Runnable';
 with 'MooseX::Getopt';
 use Proc::ProcessTable;
-require Bio::GFF3::LowLevel;
-use Bio::GFF3::LowLevel  qw (gff3_parse_feature  gff3_format_feature gff3_parse_attributes);
+use Bio::GFF3::LowLevel::Parser;
+use Bio::GFF3::LowLevel qw (gff3_parse_feature  gff3_format_feature gff3_parse_attributes);
 use Try::Tiny;
 
 has 'schema' => (
@@ -150,51 +152,103 @@ sub run {
 
 =item C<parse ()>
 
-Parse a GFF3 file. Calls parse_line() for each line.
+Parse a GFF3 file using Bio::GFF3::LowLevel::Parser.
 
 =cut
 
 sub parse {
     my ($self, %args) = @_;
-    open my $fh, "<", $self->file_name;
-    while( my $line = <$fh> ) {
-        next if $line =~ m/^\s*$/;
-        chomp $line;
-        next if $self->is_pragma_line($line);
-        $self->parse_line($line);
-    }
+    
+    my $gff = Bio::GFF3::LowLevel::Parser->open($self->file_name);
+    while ( my $item = $gff->next_item ) {
+		if ( ref $item eq 'ARRAY' ) {
+			## $i is an arrayref of feature lines that have the same ID,
+			## in the same format as returned by Bio::GFF3::LowLevel::gff3_parse_feature
+			#warn Dumper [ $i ];
+			for my $feature (@$item) {
+				# for each location of this feature
+				$self->parse_feature( $feature);
+			}
+		}
+		elsif ( $item->{directive} ) {
+			if ( $item->{directive} eq 'FASTA' ) {
+				my $fasta_filehandle = $item->{filehandle};
+				## parse the FASTA in the filehandle with BioPerl or
+				## however you want.  or ignore it.
+				print "got fasta handle\n";
+			}
+			elsif ( $item->{directive} eq 'gff-version' ) {
+				print "it says it is GFF version $item->{value}\n";
+			}
+			elsif ( $item->{directive} eq 'sequence-region' ) {
+				print( "found a sequence-region, sequence $item->{seq_id},",
+					   " from $item->{start} to $item->{end}\n" );
+			}
+		}
+		elsif ( $item->{comment} ) {
+			## this is a comment in your GFF3 file, in case you want to do
+			## something with it.
+			print "that comment said: '$item->{comment}'\n";
+		}
+		else {
+			die 'this should never happen!';
+		}
+	}
+
+#    open my $fh, "<", $self->file_name;
+#    while( my $line = <$fh> ) {
+#        next if $line =~ m/^\s*$/;
+#        chomp $line;
+#        next if $self->is_pragma_line($line);
+#        $self->parse_line($line);
+#    }
 }
 
-=item C<parse_line ()>
+=item C<parse_feature ()>
 
-Parse a GFF3 line to get feature details. 
+Parse a feature HashRef to pupulate data structures for self and children/derived features. Calls itself recursively if there are child or derived features. 
 
-CAVEAT: This will break if no ID field is present
+CAVEAT: This will exit if no ID field is present
 
 =cut
 
-sub parse_line {
-    my ($self, $line) = @_;
-    my $gff_line_hash = gff3_parse_feature($line);
+sub parse_feature {
+    my $self = shift;
+    my $feature_hash = shift;
     
-    #warn Dumper [$gff_line_hash];
+    #warn Dumper [$self];
+    #warn Dumper [ $feature_hash];
+
+    #validate parents NO NEED NOW
+#    if (exists $feature_hash->{'attributes'}->{'Parent'}){
+#		$self->_validate_parents($feature_hash->{'attributes'}->{'Parent'}->[0]);    	
+#    }
     
-    #validate parents
-    if (exists $gff_line_hash->{'attributes'}->{'Parent'}){
-		$self->_validate_parents($gff_line_hash->{'attributes'}->{'Parent'}->[0]);    	
-    }
-    
-    # add data, Will break if no ID field
-    if ( $self->features_gff_exists($gff_line_hash->{'attributes'}->{'ID'}->[0]) ){
+    # add data, Will exit if no ID field
+    if ( $self->features_gff_exists($feature_hash->{'attributes'}->{'ID'}->[0]) ){
     	die "Multiple features with same ID found. Exiting..";
     }
-    elsif (!defined $gff_line_hash->{'attributes'}->{'ID'}->[0]){
+    elsif (!defined $feature_hash->{'attributes'}->{'ID'}->[0]){
     	die "No ID defined for feature in GFF. Exiting..";
     }
     else{
-	    $self->add_features_gff( $gff_line_hash->{'attributes'}->{'ID'}->[0] => $gff_line_hash);
-	    $self->add_cvterms_gff( $gff_line_hash->{'type'} => 1 );	
+	    $self->add_features_gff( $feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash);
+	    $self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
     }
+    
+    #recursively calling self for nested child features, need to pass $self explicitly
+    if ( $feature_hash->{'child_features'} ) {
+		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
+			parse_feature( $self,$feature_child->[0]);
+		}
+	}
+	
+	#recursively calling self for nested derived features, need to pass $self explicitly
+    if ( $feature_hash->{'derived_features'} ) {
+		for my $feature_derived ( @{ $feature_hash->{'derived_features'} } ) {
+			parse_feature( $self,$feature_derived->[0]);
+		}
+	}
 }
 
 =item C<_validate_parents ()>
