@@ -69,7 +69,9 @@ Load data into chado.
 
 =head1 AUTHOR
 
-Jonathan Duke Leto, C<< <jonathan at leto.net> >>
+    Surya Saha				<suryasaha at cornell dot edu , @SahaSurya>   
+    Lukas Mueller			<lam87 at cornell dot edu>
+    Jonathan "Duke" Leto	<jonathan at leto dot net>
 
 =head1 BUGS
 
