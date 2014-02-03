@@ -216,14 +216,14 @@ sub parse_feature {
 	    $self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
     }
     
-    #recursively calling self for nested child features, need to pass $self explicitly
+    #recursively calling self for nested child features
     if ( $feature_hash->{'child_features'} ) {
 		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
 			$self->parse_feature($feature_child->[0]);
 		}
 	}
 	
-	#recursively calling self for nested derived features, need to pass $self explicitly
+	#recursively calling self for nested derived features
     if ( $feature_hash->{'derived_features'} ) {
 		for my $feature_derived ( @{ $feature_hash->{'derived_features'} } ) {
 			$self->parse_feature($feature_derived->[0]);
@@ -319,7 +319,7 @@ Compare %features from GFF to %cache. Prepare data structures to write to DB. GF
 not found in %cache are written to gff3.exceptions. New featureloc records have locgroup=0 and 
 rank=0 (primary location). Old locgroups for features being inserted are incremented by 1.
 
-CAVEAT: GFF values currently not handled are sequence. Only new featureloc's are handled right now.
+CAVEAT: Only new featureloc's are handled right now.
 
 =cut
 
