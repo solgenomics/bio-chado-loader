@@ -219,14 +219,14 @@ sub parse_feature {
     #recursively calling self for nested child features, need to pass $self explicitly
     if ( $feature_hash->{'child_features'} ) {
 		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
-			parse_feature( $self,$feature_child->[0]);
+			$self->parse_feature($feature_child->[0]);
 		}
 	}
 	
 	#recursively calling self for nested derived features, need to pass $self explicitly
     if ( $feature_hash->{'derived_features'} ) {
 		for my $feature_derived ( @{ $feature_hash->{'derived_features'} } ) {
-			parse_feature( $self,$feature_derived->[0]);
+			$self->parse_feature($feature_derived->[0]);
 		}
 	}
 }
