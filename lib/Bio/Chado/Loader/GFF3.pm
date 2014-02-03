@@ -507,7 +507,8 @@ sub bulk_featureloc_upload {
 
 =head1 AUTHORS
 
-    Jonathan "Duke" Leto	<jonathan at leto.net>
     Surya Saha				<suryasaha at cornell.edu , @SahaSurya>   
-
+    Lukas Mueller			<lam87 at cornell dot edu>
+    Jonathan "Duke" Leto	<jonathan at leto dot net>
+    
 =cut
