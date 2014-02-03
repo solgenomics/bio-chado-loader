@@ -386,12 +386,12 @@ sub bulk_upload {
     
 #   From current bulk loader - @tables array sets the order for which things will be inserted into the database
 #	my @tables = (
-#	   "organism", #dgg
-#	   "analysis", #dgg
-#	   "db", ## dgg
+#	   "organism", 
+#	   "analysis", 
+#	   "db", 
 #	   "dbxref",
-#	   "cv", ## dgg
-#	   "cvterm", ## dgg
+#	   "cv", 
+#	   "cvterm",
 #	   "feature",
 #	   "featureloc",
 #	   "feature_relationship",
@@ -486,7 +486,7 @@ sub bulk_featureloc_upload {
     try {
 		$self->schema->txn_do($increment_locgroup_sql);
 	} catch {# Transaction failed
-		die "Could not increment locgroups and/or create new rows. Error: $!" if ($_ =~ /Rollback failed/);# Rollback failed
+		die "Could not increment locgroups and/or create new rows. Error: $!" if ($_ =~ /Rollback failed/);
 		#deal_with_failed_transaction();
 		print STDERR "Error: ".$_;
 	};
