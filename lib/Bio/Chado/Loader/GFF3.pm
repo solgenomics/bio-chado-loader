@@ -62,7 +62,7 @@ has 'organism_id' => (
 );
 
 has 'features_gff' => (
-	documentation => 'hash of feature uniquename => hashref of entire GFF record via . It will break if no ID field in GFF record. uniquenames are used for key since GFF3 mandates they be unique in a GFF3 file.',
+	documentation => 'hash of feature uniquename => hashref of entire GFF record. It will break if no ID field in GFF record. uniquenames are used for key since GFF3 mandates they be unique in a GFF3 file.',
     is      => 'ro',
     isa     => 'HashRef',
     traits	=> ['Hash'],
@@ -73,6 +73,22 @@ has 'features_gff' => (
         features_gff_exists => 'exists',
     },
 );
+
+=item C<dump_features_gff ()>
+
+Prints the contents of the features_gff to STDERR. For internal debugging use only. 
+
+=cut
+
+sub dump_features_gff {
+    my ($self) = @_;
+
+	my ($feature_uniquename,$fields);
+
+	while (($feature_uniquename,$fields) = each %{$self->features_gff}){
+		print STDERR $feature_uniquename." => ".gff3_format_feature($fields);
+	}
+}
 
 has 'feature_ids_uniquenames_gff' => (
 	documentation => 'hash of featureID => feature_uniquename for all features in GFF that will be updated. Populated in prepare_bulk_upload',
@@ -133,7 +149,7 @@ use 5.010;
 
 =item C<run ()>
 
-TODO // See Fasta.pm
+TODO For mappable cmd line exec// See Fasta.pm
 
 =cut
 
@@ -191,7 +207,7 @@ sub parse {
 
 =item C<parse_feature ()>
 
-Parse a feature HashRef to pupulate data structures for self and children/derived features. Calls itself recursively if there are child or derived features. 
+Parse a feature HashRef to populate data structures for self and children/derived features. Calls itself recursively if there are child or derived features. Calls special mRNA handler if feature is mRNA.
 
 CAVEAT: This will exit if no ID field is present
 
@@ -204,16 +220,24 @@ sub parse_feature {
     #warn Dumper [$self];
     #warn Dumper [ $feature_hash];
     
-    # add data, Will exit if no ID field
+    # add data
     if ( $self->features_gff_exists($feature_hash->{'attributes'}->{'ID'}->[0]) ){
-    	die "Multiple features with same ID found. Exiting..";
+    	print STDERR "Duplicate found for ".$feature_hash->{'attributes'}->{'ID'}->[0]."\n";
+    	#warn Dumper [ $self->features_gff ];
+    	die "Multiple features with same ID as ".$feature_hash->{'attributes'}->{'ID'}->[0]." found. Exiting..";
     }
-    elsif (!defined $feature_hash->{'attributes'}->{'ID'}->[0]){
+    elsif (!defined $feature_hash->{'attributes'}->{'ID'}->[0]){#exit if no ID field
     	die "No ID defined for feature in GFF. Exiting..";
     }
+    elsif( $feature_hash->{'type'} eq 'mRNA' ){#call mRNA handler for parsing exons, CDSs and UTRs
+    	$self->parse_mRNA_feature($feature_hash);
+    	return;
+    }
     else{
+    	print STDERR "Adding feature ".$feature_hash->{'attributes'}->{'ID'}->[0]."\n";
 	    $self->add_features_gff( $feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash);
 	    $self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
+	    #warn Dumper [ $self->features_gff ] if $feature_hash->{'attributes'}->{'ID'}->[0]=~ /exon/;
     }
     
     #recursively calling self for nested child features
@@ -229,6 +253,196 @@ sub parse_feature {
 			$self->parse_feature($feature_derived->[0]);
 		}
 	}
+}
+
+=item C<parse_mRNA_feature ()>
+
+Saves mRNA, exons and polypeptide if exons, CDSs and UTRs are present. Saves mRNA and creates exon & polypeptide features with CDS and UTR coordinates if both are present. Dies if only CDS or UTR is present.  
+
+=cut
+
+sub parse_mRNA_feature {
+    my $self = shift;
+    my $feature_hash = shift;
+    
+    my %children = (
+    	'exon' => 0,
+    	'intron' => 0,
+    	'CDS' => 0,
+    	'five_prime_UTR' => 0,
+    	'three_prime_UTR' => 0,
+    );
+     
+    #test children presence/absence
+    if ( $feature_hash->{'child_features'} ) {
+		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
+			die "mRNA has child feature other than five_prime_UTR, three_prime_UTR, CDS, exon .. cannot handle "
+				if (!exists $children{$feature_child->[0]->{'type'}});
+			$children{$feature_child->[0]->{'type'}}++;
+			#$self->parse_feature($feature_child->[0]);
+		}
+	}
+	else{
+		print STDERR "No child features saved for ".$feature_hash->{'attributes'}->{'ID'}->[0]."\n";
+		return;
+	}
+	
+	#polypeptide
+	my (@starts,@ends,$gene);
+	$gene=$feature_hash->{'attributes'}->{'ID'}->[0];
+	$gene=~ s/^mRNA\://;
+	
+	my $polypeptide_feature = {
+		seq_id => $feature_hash->{'seq_id'},
+		source => $feature_hash->{'source'},
+		type   => 'polypeptide',
+		#start  => '23486',
+		#end    => '48209',
+		score  => undef,
+		strand => $feature_hash->{'strand'},
+		phase  => undef,
+		attributes => {
+			ID => [
+				'polypeptide:'.$gene
+			],
+			Parent => [
+				$feature_hash->{'attributes'}->{'Parent'}->[0]
+			],
+		},
+		child_features => [],
+		derived_features => [],
+	};
+
+	if( $children{'CDS'}){
+		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
+			if($feature_child->[0]->{'type'} eq 'CDS'){
+				push @starts, $feature_child->[0]->{'start'} - 1 ;
+				push @ends, $feature_child->[0]->{'end'};
+			}
+		}
+	}
+	elsif( $children{'five_prime_UTR'} && $children{'three_prime_UTR'}){
+		#Do we check if >1 3' or 5' UTRs???
+		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
+			if($feature_child->[0]->{'type'} eq 'five_prime_UTR'){
+				push @starts, $feature_child->[0]->{'start'} -1;
+			}
+			elsif($feature_child->[0]->{'type'} eq 'three_prime_UTR'){
+				push @ends, $feature_child->[0]->{'end'};
+			}
+		}
+	}
+	$polypeptide_feature->{'start'} = (sort { $a <=> $b } @starts)[0]; #asc
+	$polypeptide_feature->{'end'} = (sort { $b <=> $a } @ends)[0]; #desc
+	#add polypeptide
+	$self->parse_feature($polypeptide_feature);
+	
+	#exons
+	if( $children{'exon'}){
+		#save exons
+		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
+			if($feature_child->[0]->{'type'} eq 'exon'){
+				print STDERR "Adding exon auto ".$feature_child->[0]->{'attributes'}->{'ID'}->[0]."\n";
+				$self->parse_feature($feature_child->[0]);
+			}
+		}
+	}
+	elsif( !$children{'exon'} ){#this will not happen for tomato GFF3s
+		print STDERR "Adding exons manually\n";
+		#check if only 1 3' and only 1 5' UTR
+		die "More than one or no five_prime_UTR or three_prime_UTR for ".$feature_hash->{'attributes'}->{'ID'}->[0]
+			if (($children{'five_prime_UTR'} != 1) || ($children{'three_prime_UTR'} != 1) );
+		
+		#get coords
+		my ( %cds_starts, %cds_ends, $five_prime_UTR_start, $three_prime_UTR_end);
+		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
+			if($feature_child->[0]->{'type'} eq 'CDS'){
+				print STDERR "Adding hash data for ".$feature_child->[0]->{'attributes'}->{'ID'}->[0]."\n";
+				$cds_starts{$feature_child->[0]->{'attributes'}->{'ID'}->[0]} = $feature_child->[0]->{'start'} - 1; 
+				$cds_ends{$feature_child->[0]->{'attributes'}->{'ID'}->[0]} = $feature_child->[0]->{'end'};
+			}
+			elsif($feature_child->[0]->{'type'} eq 'five_prime_UTR'){
+				$five_prime_UTR_start = $feature_child->[0]->{'start'} - 1; 
+			}
+			elsif($feature_child->[0]->{'type'} eq 'three_prime_UTR'){
+				$three_prime_UTR_end = $feature_child->[0]->{'end'}; 
+			}
+		}		
+		
+		#check if 5' before 1st CDS and 3' after last CDS
+		die "five_prime_UTR starts at or after first CDS for ".$feature_hash->{'attributes'}->{'ID'}->[0]
+			if ( $five_prime_UTR_start >= ((sort { $a <=> $b } values %cds_starts)[0])); #asc
+		die "three_prime_UTR ends at or before last CDS for ".$feature_hash->{'attributes'}->{'ID'}->[0]
+			if ( $three_prime_UTR_end <= ((sort { $b <=> $a } values %cds_ends)[0])); #desc
+		
+	
+		#create exons
+		#my ($CDS_ID,$value);
+		
+		print STDERR "cds_starts size ".(scalar keys %cds_starts)."\n";
+		while ( my ($CDS_ID,$value) = each (%cds_starts)) {
+			print STDERR "key: $CDS_ID\t val: $value\n";	
+		}
+		
+		my @cds_starts_values = values %cds_starts;
+		while ( my ($CDS_ID,$value) = each (%cds_starts)) {
+			print STDERR "\tkey: $CDS_ID\t val: $value\n";
+			my $CDS_ID_trimmed = $CDS_ID;
+			$CDS_ID_trimmed =~ s/^CDS\://;
+			my $exon_feature = {
+				seq_id => $feature_hash->{'seq_id'},
+				source => $feature_hash->{'source'},
+				type   => 'exon',
+				#start  => '23486',
+				#end    => '48209',
+				score  => undef,
+				strand => $feature_hash->{'strand'},
+				phase  => undef,
+				attributes => {
+					ID => [
+						'exon:'.$CDS_ID_trimmed
+					],
+					Parent => [
+						$feature_hash->{'attributes'}->{'ID'}->[0]
+					],
+				},
+				child_features => [],
+				derived_features => [],
+			};			
+			print STDERR "Created exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
+
+			#my @cds_starts_values = values %cds_starts;
+			#if first CDS
+			#if( $value == ((sort { $a <=> $b } (values %cds_starts))[0])){
+			if( $value == ((sort { $a <=> $b } @cds_starts_values)[0])){
+				$exon_feature->{'start'} = $five_prime_UTR_start;
+				$exon_feature->{'end'} = $cds_ends{$CDS_ID};
+			}	     
+			#elsif( $value == ((sort { $b <=> $a } (values %cds_starts))[0])){#if last CDS
+			elsif( $value == ((sort { $b <=> $a } (@cds_starts_values))[0])){#if last CDS
+				$exon_feature->{'start'} = $value;
+				$exon_feature->{'end'} = $three_prime_UTR_end;
+			}
+			else{#CDS in the middle
+				$exon_feature->{'start'} = $value;
+				$exon_feature->{'end'} = $cds_ends{$CDS_ID};
+			}
+			#save exon
+			print STDERR "Saving exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
+			#warn Dumper [ $exon_feature];
+			$self->parse_feature($exon_feature);
+			print STDERR "Saved exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
+			#$CDS_ID=$CDS_ID_trimmed=undef;
+		}
+	}
+	
+	#remove mRNA sub features info to save memory
+	$feature_hash->{'child_features'} = [];
+	$feature_hash->{'derived_features'} = [];
+	#save mRNA
+	$self->add_features_gff( $feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash);
+        $self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
+	
 }
 
 =item C<organism_exists ()>
