@@ -61,7 +61,7 @@ sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(8){
     dies_ok sub { $loader->parse() }, qr/dummy is an unknown Parent/;
 }
 
-#Change cache SQL string to run routine
+#Change cache SQL search string in populate_cache() to run routine
 #sub TEST_DB_CACHE_INSERT : Test(13){
 #	my $loader = Bio::Chado::Loader::GFF3->new(
 #        file_name => "t/data/insert_test.gff3",
@@ -137,5 +137,26 @@ sub TEST_DB_INSERT_Solyc01g112300 : Test(13){
 	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc')
 }
 
+sub TEST_mRNA_HANDLER: Tests{
+	my $loader = Bio::Chado::Loader::GFF3->new(
+        file_name => "t/data/Solyc01g112300.2.gff3",
+    );
+    
+    $loader->parse();
+    $loader->dump_features_gff();
+}
+
+sub TEST_mRNA_HANDLER_NOEXON: Tests{
+	my $loader = Bio::Chado::Loader::GFF3->new(
+        file_name => "t/data/Solyc01g112300.2.gff3_noexon",
+    );
+    
+    $loader->parse();
+    $loader->dump_features_gff();
+}
+
+
+#$ENV{TEST_METHOD} = 'TEST_DB_CONNECT'; #set regex for routine(s) to run
 __PACKAGE__->runtests;
+
 
