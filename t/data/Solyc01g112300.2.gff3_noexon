@@ -1,0 +1,9 @@
+SL2.50ch01	ITAG_eugene	gene	98370069	98377119	.	+	.	ID=gene:Solyc01g112300.2;Name=Solyc01g112300.2;Alias=Solyc01g112300;from_BOGAS=1;length=7051
+SL2.50ch01	ITAG_eugene	mRNA	98370069	98377119	.	+	.	ID=mRNA:Solyc01g112300.2.1;Name=Solyc01g112300.2.1;Parent=gene:Solyc01g112300.2;Note=Chloride channel E (AHRD V1 ***- D3YP04_THEHA)%3B contains Interpro domain(s)  IPR001807  Chloride channel%2C voltage gated ;Ontology_term=GO:0016020,GO:0055085;from_BOGAS=1;interpro2go_term=GO:0016020,GO:0055085;length=7051;nb_exon=3
+SL2.50ch01	ITAG_eugene	five_prime_UTR	98370069	98370095	.	+	.	ID=five_prime_UTR:Solyc01g112300.2.1.0;Parent=mRNA:Solyc01g112300.2.1;from_BOGAS=1
+SL2.50ch01	ITAG_eugene	CDS	98370096	98370410	.	+	0	ID=CDS:Solyc01g112300.2.1.1;Parent=mRNA:Solyc01g112300.2.1;from_BOGAS=1
+SL2.50ch01	ITAG_eugene	intron	98370411	98370491	.	+	.	ID=intron:Solyc01g112300.2.1.1;Parent=mRNA:Solyc01g112300.2.1;from_BOGAS=1
+SL2.50ch01	ITAG_eugene	CDS	98370492	98370882	.	+	0	ID=CDS:Solyc01g112300.2.1.2;Parent=mRNA:Solyc01g112300.2.1;from_BOGAS=1
+SL2.50ch01	ITAG_eugene	intron	98370883	98376607	.	+	.	ID=intron:Solyc01g112300.2.1.2;Parent=mRNA:Solyc01g112300.2.1;from_BOGAS=1
+SL2.50ch01	ITAG_eugene	CDS	98376608	98376852	.	+	2	ID=CDS:Solyc01g112300.2.1.3;Parent=mRNA:Solyc01g112300.2.1;from_BOGAS=1
+SL2.50ch01	ITAG_eugene	three_prime_UTR	98376889	98377119	.	+	.	ID=three_prime_UTR:Solyc01g112300.2.1.0;Parent=mRNA:Solyc01g112300.2.1;from_BOGAS=1
