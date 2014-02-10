@@ -222,7 +222,7 @@ sub parse_feature {
     
     # add data
     if ( $self->features_gff_exists($feature_hash->{'attributes'}->{'ID'}->[0]) ){
-    	print STDERR "Duplicate found for ".$feature_hash->{'attributes'}->{'ID'}->[0]."\n";
+    	#print STDERR "Duplicate found for ".$feature_hash->{'attributes'}->{'ID'}->[0]."\n";
     	#warn Dumper [ $self->features_gff ];
     	die "Multiple features with same ID as ".$feature_hash->{'attributes'}->{'ID'}->[0]." found. Exiting..";
     }
@@ -348,7 +348,7 @@ sub parse_mRNA_feature {
 		}
 	}
 	elsif( !$children{'exon'} ){#this will not happen for tomato GFF3s
-		print STDERR "Adding exons manually\n";
+		#print STDERR "Adding exons manually\n";
 		#check if only 1 3' and only 1 5' UTR
 		die "More than one or no five_prime_UTR or three_prime_UTR for ".$feature_hash->{'attributes'}->{'ID'}->[0]
 			if (($children{'five_prime_UTR'} != 1) || ($children{'three_prime_UTR'} != 1) );
@@ -357,7 +357,7 @@ sub parse_mRNA_feature {
 		my ( %cds_starts, %cds_ends, $five_prime_UTR_start, $three_prime_UTR_end);
 		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
 			if($feature_child->[0]->{'type'} eq 'CDS'){
-				print STDERR "Adding hash data for ".$feature_child->[0]->{'attributes'}->{'ID'}->[0]."\n";
+				#print STDERR "Adding hash data for ".$feature_child->[0]->{'attributes'}->{'ID'}->[0]."\n";
 				$cds_starts{$feature_child->[0]->{'attributes'}->{'ID'}->[0]} = $feature_child->[0]->{'start'} - 1; 
 				$cds_ends{$feature_child->[0]->{'attributes'}->{'ID'}->[0]} = $feature_child->[0]->{'end'};
 			}
@@ -377,16 +377,11 @@ sub parse_mRNA_feature {
 		
 	
 		#create exons
-		#my ($CDS_ID,$value);
+		#print STDERR "cds_starts size ".(scalar keys %cds_starts)."\n";
 		
-		print STDERR "cds_starts size ".(scalar keys %cds_starts)."\n";
+		my @cds_starts_values = values %cds_starts;#need to do this outside each() loop since values uses same internal iterator
 		while ( my ($CDS_ID,$value) = each (%cds_starts)) {
-			print STDERR "key: $CDS_ID\t val: $value\n";	
-		}
-		
-		my @cds_starts_values = values %cds_starts;
-		while ( my ($CDS_ID,$value) = each (%cds_starts)) {
-			print STDERR "\tkey: $CDS_ID\t val: $value\n";
+			#print STDERR "\tkey: $CDS_ID\t val: $value\n";
 			my $CDS_ID_trimmed = $CDS_ID;
 			$CDS_ID_trimmed =~ s/^CDS\://;
 			my $exon_feature = {
@@ -409,16 +404,14 @@ sub parse_mRNA_feature {
 				child_features => [],
 				derived_features => [],
 			};			
-			print STDERR "Created exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
+			#print STDERR "Created exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
 
 			#my @cds_starts_values = values %cds_starts;
 			#if first CDS
-			#if( $value == ((sort { $a <=> $b } (values %cds_starts))[0])){
 			if( $value == ((sort { $a <=> $b } @cds_starts_values)[0])){
 				$exon_feature->{'start'} = $five_prime_UTR_start;
 				$exon_feature->{'end'} = $cds_ends{$CDS_ID};
 			}	     
-			#elsif( $value == ((sort { $b <=> $a } (values %cds_starts))[0])){#if last CDS
 			elsif( $value == ((sort { $b <=> $a } (@cds_starts_values))[0])){#if last CDS
 				$exon_feature->{'start'} = $value;
 				$exon_feature->{'end'} = $three_prime_UTR_end;
@@ -428,10 +421,10 @@ sub parse_mRNA_feature {
 				$exon_feature->{'end'} = $cds_ends{$CDS_ID};
 			}
 			#save exon
-			print STDERR "Saving exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
+			#print STDERR "Saving exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
 			#warn Dumper [ $exon_feature];
 			$self->parse_feature($exon_feature);
-			print STDERR "Saved exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
+			#print STDERR "Saved exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
 			#$CDS_ID=$CDS_ID_trimmed=undef;
 		}
 	}
@@ -441,8 +434,7 @@ sub parse_mRNA_feature {
 	$feature_hash->{'derived_features'} = [];
 	#save mRNA
 	$self->add_features_gff( $feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash);
-        $self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
-	
+    $self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
 }
 
 =item C<organism_exists ()>
