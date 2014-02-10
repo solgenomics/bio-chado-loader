@@ -335,6 +335,7 @@ sub parse_mRNA_feature {
 	$polypeptide_feature->{'start'} = (sort { $a <=> $b } @starts)[0]; #asc
 	$polypeptide_feature->{'end'} = (sort { $b <=> $a } @ends)[0]; #desc
 	#add polypeptide
+	print STDERR "\rCreating polypeptide feature for ".$feature_hash->{'attributes'}->{'ID'}->[0];
 	$self->parse_feature($polypeptide_feature);
 	
 	#exons
@@ -348,6 +349,7 @@ sub parse_mRNA_feature {
 		}
 	}
 	elsif( !$children{'exon'} ){#this will not happen for tomato GFF3s
+		print STDERR "\rCreating exon features for ".$feature_hash->{'attributes'}->{'ID'}->[0];
 		#print STDERR "Adding exons manually\n";
 		#check if only 1 3' and only 1 5' UTR
 		die "More than one or no five_prime_UTR or three_prime_UTR for ".$feature_hash->{'attributes'}->{'ID'}->[0]
