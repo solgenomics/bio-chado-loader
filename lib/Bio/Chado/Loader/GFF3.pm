@@ -17,6 +17,10 @@ Bio::Chado::Loader::GFF3 - Load GFF3 files into the Chado database schema
 This is a MooseX::Runnable class that loads feature data given in GFF3 format into a Chado schema.
 The GFF3 spec is available online at L<http://www.sequenceontology.org/gff3.shtml>
 
+The new chromosome backbone has to be loaded into the database using the GMOD bulk loader before new 
+coordinates can be added. The source feature is required to be present before any new featurelocs 
+can be placed on it.
+
 CAVEAT
 Will break if no ID field in attributes in GFF record
 
@@ -61,6 +65,13 @@ has 'organism_id' => (
     isa      => 'Str',
 );
 
+has 'debug' => (
+    documentation => 'Verbosity flag (0/1)',
+    is       => 'rw',
+    isa      => 'Int',
+    default => 0,
+);
+
 has 'features_gff' => (
 	documentation => 'hash of feature uniquename => hashref of entire GFF record. It will break if no ID field in GFF record. uniquenames are used for key since GFF3 mandates they be unique in a GFF3 file.',
     is      => 'ro',
@@ -82,7 +93,6 @@ Prints the contents of the features_gff to STDERR. For internal debugging use on
 
 sub dump_features_gff {
     my ($self) = @_;
-
 	my ($feature_uniquename,$fields);
 
 	while (($feature_uniquename,$fields) = each %{$self->features_gff}){
@@ -110,6 +120,7 @@ has 'feature_ids_uniquenames_gff' => (
     },
 );
 
+#Do we need this??
 has 'cvterms_gff' => (
 	documentation => 'hash of cvterm => 1 from GFF. TOFIX Use counts instead of constant 1',
     is      => 'ro',
@@ -230,7 +241,6 @@ sub parse_feature {
     
     # add data
     if ( $self->features_gff_exists($feature_hash->{'attributes'}->{'ID'}->[0]) ){
-    	#print STDERR "Duplicate found for ".$feature_hash->{'attributes'}->{'ID'}->[0]."\n";
     	#warn Dumper [ $self->features_gff ];
     	die "Multiple features with same ID as ".$feature_hash->{'attributes'}->{'ID'}->[0]." found. Exiting..";
     }
@@ -242,15 +252,9 @@ sub parse_feature {
     	return;
     }
     else{
-    	#print STDERR "Adding feature ".$feature_hash->{'attributes'}->{'ID'}->[0]."\n";
 	    $self->add_features_gff( $feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash);
 	    $self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
 	    #warn Dumper [ $self->features_gff ] if $feature_hash->{'attributes'}->{'ID'}->[0]=~ /exon/;
-	    
-#	    #pushing seqid only for top level features since all child features will have same seqid
-#	    if(!( exists $self->seq_id_feature_ids_gff->{$feature_hash->{'seq_id'}})){
-#	    	$self->seq_id_feature_ids_gff->{$feature_hash->{'seq_id'}} = 0;
-#	    }
     }
     
     #recursively calling self for nested child features
@@ -296,7 +300,11 @@ sub parse_mRNA_feature {
 		}
 	}
 	else{
-		print STDERR "No child features saved for ".$feature_hash->{'attributes'}->{'ID'}->[0]."\n";
+		if ($self->debug){
+			print STDERR "No child features saved for ".$feature_hash->{'attributes'}
+				->{'ID'}->[0]."\n";
+		}
+		
 		return;
 	}
 	
@@ -358,7 +366,11 @@ sub parse_mRNA_feature {
 	$polypeptide_feature->{'start'} = (sort { $a <=> $b } @starts)[0]; #asc
 	$polypeptide_feature->{'end'} = (sort { $b <=> $a } @ends)[0]; #desc
 	#add polypeptide
-	print STDERR "\rCreating polypeptide feature for ".$feature_hash->{'attributes'}->{'ID'}->[0];
+	if($self->debug){
+		print STDERR "\rCreating polypeptide feature for ".$feature_hash->
+			{'attributes'}->{'ID'}->[0];
+	}
+	
 	$self->parse_feature($polypeptide_feature);
 	
 	#exons
@@ -366,14 +378,16 @@ sub parse_mRNA_feature {
 		#save exons
 		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
 			if($feature_child->[0]->{'type'} eq 'exon'){
-				#print STDERR "Adding exon auto ".$feature_child->[0]->{'attributes'}->{'ID'}->[0]."\n";
 				$self->parse_feature($feature_child->[0]);
 			}
 		}
 	}
 	elsif( !$children{'exon'} ){#this will not happen for tomato GFF3s
-		print STDERR "\rCreating exon features for ".$feature_hash->{'attributes'}->{'ID'}->[0];
-		#print STDERR "Adding exons manually\n";
+		if($self->debug){
+			print STDERR "\rCreating exon features for ".$feature_hash->
+				{'attributes'}->{'ID'}->[0];
+		}
+		
 		#check if only 1 3' and only 1 5' UTR
 		die "More than one or no five_prime_UTR or three_prime_UTR for ".$feature_hash->{'attributes'}->{'ID'}->[0]
 			if (($children{'five_prime_UTR'} != 1) || ($children{'three_prime_UTR'} != 1) );
@@ -382,7 +396,6 @@ sub parse_mRNA_feature {
 		my ( %cds_starts, %cds_ends, $five_prime_UTR_start, $three_prime_UTR_end);
 		for my $feature_child ( @{ $feature_hash->{'child_features'} } ) {
 			if($feature_child->[0]->{'type'} eq 'CDS'){
-				#print STDERR "Adding hash data for ".$feature_child->[0]->{'attributes'}->{'ID'}->[0]."\n";
 				$cds_starts{$feature_child->[0]->{'attributes'}->{'ID'}->[0]} = $feature_child->[0]->{'start'} - 1; 
 				$cds_ends{$feature_child->[0]->{'attributes'}->{'ID'}->[0]} = $feature_child->[0]->{'end'};
 			}
@@ -402,11 +415,8 @@ sub parse_mRNA_feature {
 		
 	
 		#create exons
-		#print STDERR "cds_starts size ".(scalar keys %cds_starts)."\n";
-		
 		my @cds_starts_values = values %cds_starts;#need to do this outside each() loop since values uses same internal iterator
 		while ( my ($CDS_ID,$value) = each (%cds_starts)) {
-			#print STDERR "\tkey: $CDS_ID\t val: $value\n";
 			my $CDS_ID_trimmed = $CDS_ID;
 			$CDS_ID_trimmed =~ s/^CDS\://;
 			my $exon_feature = {
@@ -429,9 +439,7 @@ sub parse_mRNA_feature {
 				child_features => [],
 				derived_features => [],
 			};			
-			#print STDERR "Created exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
 
-			#my @cds_starts_values = values %cds_starts;
 			#if first CDS
 			if( $value == ((sort { $a <=> $b } @cds_starts_values)[0])){
 				$exon_feature->{'start'} = $five_prime_UTR_start;
@@ -446,11 +454,8 @@ sub parse_mRNA_feature {
 				$exon_feature->{'end'} = $cds_ends{$CDS_ID};
 			}
 			#save exon
-			#print STDERR "Saving exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
 			#warn Dumper [ $exon_feature];
 			$self->parse_feature($exon_feature);
-			#print STDERR "Saved exon ".$exon_feature->{attributes}->{ID}->[0]."\n";
-			#$CDS_ID=$CDS_ID_trimmed=undef;
 		}
 	}
 	
@@ -461,7 +466,9 @@ sub parse_mRNA_feature {
 	$self->add_features_gff( $feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash);
     $self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
     
-    print STDERR "\n";
+    if($self->debug){
+    	print STDERR "\n";
+    }
 }
 
 =item C<organism_exists ()>
@@ -504,14 +511,17 @@ sub populate_cache {
 		{ 'organism_id'=> $self->organism_id },
 		{ join => [ 'type' ] , prefetch=> [ 'type']}
 		);
-    print STDERR "fl_rs count: ".$fl_rs->count()."\n";
-    print STDERR "ft_rs count: ".$ft_rs->count()."\n";
+    
     
     my $ft_fname_fid_rs = $self->schema-> resultset('Sequence::Feature')->search(
     	{ 'organism_id'=> 1 },
 		{columns => [qw/uniquename feature_id/]},
     	);
-    print STDERR "ft_fname_fid_rs count: ".$ft_rs->count()."\n";
+    if($self->debug){
+		print STDERR "fl_rs count: ".$fl_rs->count()."\n";
+	    print STDERR "ft_rs count: ".$ft_rs->count()."\n";
+	    print STDERR "ft_fname_fid_rs count: ".$ft_rs->count()."\n";    	
+    }
     
     my $count = 0;
     #create feature_uniquename_feature_id_cache
@@ -521,8 +531,9 @@ sub populate_cache {
 				=> $ft_fname_fid_row->feature_id() );
 			$count++;
     }
-    print STDERR "Added ".$self->count_feature_uniquename_feature_id_cache()." records to feature_uniquename_feature_id_cache\n";
     
+   	print STDERR "Added ".$self->count_feature_uniquename_feature_id_cache().
+    		" records to feature_uniquename_feature_id_cache\n";
     
     #create cache hash
     $count = 0;
@@ -544,7 +555,7 @@ sub populate_cache {
 			
 			$count++;	
 			if ($count % 100000 == 0) {
-				print STDERR "processing $count\r";
+				print STDERR "\rprocessing $count";
 				#warn Dumper [ $self-> cache -> {$ft_row->type->name()}->{$fl_row->feature->uniquename()}];
 				#warn Dumper [ $self-> cache -> {$ft_row->type->name()}];
 			    my ( $i, $t );
@@ -553,7 +564,7 @@ sub populate_cache {
 					next if not $got->pid eq $$;
 					$i = $got->size;
 				}
-				print STDERR "Memory used: ".($i / 1024 / 1024)."MB \n";
+				print STDERR "\nMemory used: ".($i / 1024 / 1024)."MB \n";
 			}
 		}
 		else{
@@ -585,11 +596,9 @@ sub prepare_bulk_upload {
     #warn Dumper [ $self->feature_uniquename_feature_id_cache ];
     while (($feature_uniquename,$fields) = each %{$self->features_gff}){
     	
-    	#if feature and seq_id/scrfeature in cache feature_uniquename_feature_id_cache_exists
+    	#if feature and seq_id/scrfeature in cache, try feature_uniquename_feature_id_cache_exists??
     	if (($self->cache->{$fields->{'type'}}->{$feature_uniquename})
     		&& ($self->feature_uniquename_feature_id_cache->{$fields->{'seq_id'}})){
-    		#create intermediate file str
-    		#print STDERR "Data string for $feature_uniquename\n"; 
     		
     		#record feature_ids in class var
     		$self->add_feature_ids_uniquenames_gff( $self->cache->{$fields->{'type'}}->{$feature_uniquename}->{feature_id} 
@@ -602,10 +611,7 @@ sub prepare_bulk_upload {
     	}
     	else{
     		#create exception file str
-    		#print STDERR "Exception GFF record for $feature_uniquename\n";
 			#warn Dumper [ $fields ];
-    		
-    		#$disk_exception_str.=join("	", @$fields)."\n";
     		$disk_exception_str.=gff3_format_feature($fields);
     		$counters{'exceptions'}++;
     	}
