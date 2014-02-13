@@ -100,14 +100,6 @@ sub dump_features_gff {
 	}
 }
 
-#has 'seq_id_feature_ids_gff' => (
-#	documentation => 'hash of seqid => feature_id for all features in GFF that will be updated.',
-#    is      => 'ro',
-#    isa     => 'HashRef',
-#    traits	=> ['Hash'],
-#    default => sub { { } },
-#);
-
 has 'feature_ids_uniquenames_gff' => (
 	documentation => 'hash of featureID => feature_uniquename for all features in GFF that will be updated. Populated in prepare_bulk_upload',
     is      => 'ro',
@@ -120,7 +112,6 @@ has 'feature_ids_uniquenames_gff' => (
     },
 );
 
-#Do we need this??
 has 'cvterms_gff' => (
 	documentation => 'hash of cvterm => 1 from GFF. TOFIX Use counts instead of constant 1',
     is      => 'ro',
@@ -500,10 +491,25 @@ sub populate_cache {
     my ($self) = @_;
     
     #setup DB dsn's
+    #check names for only cvterms read from GFF file
+    #will fail for remark records from assembly.gff3, are they needed in DB??
+    my $ft_auto_err_rs = $self->schema-> resultset('Sequence::Feature')->search(
+    	{ 'me.organism_id'=> $self->organism_id, 
+		  'me.uniquename' => { 'like', "%auto%" },
+    	  'type.name'     => [ keys %{$self->cvterms_gff} ],
+    	},
+    	{ join => [ 'type' ] , prefetch=> [ 'type']}
+    	);
+    	
+    die "There are features in database with auto in feature.uniquename field. 
+    	Please correct this in your database before running this script.
+    	This typically happens when the GMOD bulk loader is used to add the 
+    	same feature more than once. Exiting..." if $ft_auto_err_rs->count()>0;
+    
     my $fl_rs = $self->schema -> resultset('Sequence::Featureloc')->search(
 #    	{ 'organism_id'=> $self->organism_id }, #for full DB
 		{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%Solyc01g1123%'}},#for testing, only 69 floc records
-#		{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only 2 floc records
+#		{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only few floc records
     	{ join => [ 'feature' ] , prefetch=> [ 'feature']}
     	);
 
@@ -514,7 +520,7 @@ sub populate_cache {
     
     
     my $ft_fname_fid_rs = $self->schema-> resultset('Sequence::Feature')->search(
-    	{ 'organism_id'=> 1 },
+    	{ 'organism_id'=> $self->organism_id },
 		{columns => [qw/uniquename feature_id/]},
     	);
     if($self->debug){
