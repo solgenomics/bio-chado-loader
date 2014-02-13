@@ -55,8 +55,7 @@ sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(8){
 	is($loader->organism_exists() , 1, 'got correct org id from org table');
 	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
 	run_time(); mem_used();
-	ok(my $cnt = $loader->populate_cache(), 'populated cache');
-	print STDERR 'Cache has '.$cnt."\n";
+	ok($loader->populate_cache(), 'populated cache');
 	run_time(); mem_used();
     dies_ok sub { $loader->parse() }, qr/dummy is an unknown Parent/;
 }
@@ -96,7 +95,7 @@ sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(8){
 #	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc')
 #}
 
-sub TEST_DB_INSERT_Solyc01g112300 : Test(13){
+sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	my $loader = Bio::Chado::Loader::GFF3->new(
         file_name => "t/data/Solyc01g112300.2.gff3",
     );
@@ -109,29 +108,27 @@ sub TEST_DB_INSERT_Solyc01g112300 : Test(13){
 	is($loader->organism_exists() , 1, 'got correct org id from org table');
 	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
 	run_time(); mem_used();
-	ok(my $cnt = $loader->populate_cache(), 'populated cache');
-	print STDERR 'Cache has '.$cnt."\n";
+	ok($loader->populate_cache(), 'populated cache');
 	run_time(); mem_used();
 
     $loader->parse();
-    is($loader->count_cvterms_gff, 7, 'found 7 unique cvterms');
-    is($loader->count_features_gff, 12, 'found 12 unique features');
+	#only genes, mRNAs, exons, introns and  polypeptides 
+    is($loader->count_cvterms_gff, 5, 'found 5 unique cvterms');
+    is($loader->count_features_gff, 8, 'found 8 unique features');
 
     cmp_set( [ keys %{$loader->features_gff} ], [ qw/
         gene:Solyc01g112300.2 mRNA:Solyc01g112300.2.1
-        exon:Solyc01g112300.2.1.1 five_prime_UTR:Solyc01g112300.2.1.0
-        CDS:Solyc01g112300.2.1.1 intron:Solyc01g112300.2.1.1
-        exon:Solyc01g112300.2.1.2 CDS:Solyc01g112300.2.1.2
-        intron:Solyc01g112300.2.1.2 exon:Solyc01g112300.2.1.3
-        CDS:Solyc01g112300.2.1.3 three_prime_UTR:Solyc01g112300.2.1.0/ ],
+        exon:Solyc01g112300.2.1.1 intron:Solyc01g112300.2.1.1
+        exon:Solyc01g112300.2.1.2 intron:Solyc01g112300.2.1.2 
+        exon:Solyc01g112300.2.1.3 polypeptide:Solyc01g112300.2.1/ ],
         'Found expected features',
     );
     cmp_set( [ keys %{$loader->cvterms_gff} ], [ qw/
-        CDS five_prime_UTR three_prime_UTR exon intron gene mRNA/ ],
+        polypeptide exon intron gene mRNA/ ],
         'Found expected cvterms',
     );
     run_time(); mem_used();
-    
+    my $cnt;
 	ok($cnt=$loader->prepare_bulk_upload(), 'loaded data structures and wrote exception file');
 	print STDERR 'Prepped '.$cnt." recs for insertion\n";
 	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc')
@@ -150,7 +147,7 @@ sub TEST_mRNA_HANDLER_NOEXON: Tests{
 	my $loader = Bio::Chado::Loader::GFF3->new(
         file_name => "t/data/Solyc01g112300.2.gff3_noexon",
     );
-    
+    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
     $loader->parse();
     $loader->dump_features_gff();
 }
