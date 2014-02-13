@@ -99,6 +99,8 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	my $loader = Bio::Chado::Loader::GFF3->new(
         file_name => "t/data/Solyc01g112300.2.gff3",
     );
+    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
+    ok($loader->debug(1), 'set debug verbosity flag');
     
     #Create cache first and then parse GFF 
 	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
