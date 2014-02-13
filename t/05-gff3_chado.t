@@ -138,8 +138,12 @@ sub TEST_mRNA_HANDLER: Tests{
 	my $loader = Bio::Chado::Loader::GFF3->new(
         file_name => "t/data/Solyc01g112300.2.gff3",
     );
-    
+    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
+    ok($loader->debug(1), 'set debug verbosity flag');
     $loader->parse();
+    #only genes, mRNAs, exons, introns and  polypeptides 
+    is($loader->count_cvterms_gff, 5, 'found 5 unique cvterms');
+    is($loader->count_features_gff, 8, 'found 8 unique features');
     $loader->dump_features_gff();
 }
 
