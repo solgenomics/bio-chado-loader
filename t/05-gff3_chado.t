@@ -112,6 +112,7 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
 	run_time(); mem_used();
 	ok($loader->populate_cache(), 'populated cache');
+	is($loader->count_feature_uniquename_feature_id_cache(),1275149,'correct number of features read from DB into cache');
 	run_time(); mem_used();
 
     $loader->parse();
@@ -133,6 +134,7 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
     run_time(); mem_used();
     my $cnt;
 	ok($cnt=$loader->prepare_bulk_upload(), 'loaded data structures and wrote exception file');
+	is($loader->count_feature_ids_uniquenames_gff(),8,'recorded 8 pairs in feature_ids_uniquenames_gff hash');
 	print STDERR 'Prepped '.$cnt." recs for insertion\n";
 	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc')
 }
