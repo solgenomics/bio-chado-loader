@@ -5,6 +5,7 @@ use Test::Class::Most;
 use Bio::Chado::Loader::GFF3;
 #use Carp::Always;
 
+#util functions
 sub mem_used {
 	my ( $i, $t );
 	$t = new Proc::ProcessTable;
@@ -23,6 +24,7 @@ sub run_time {
 	print STDERR "User time for process: $user_t\n\n";
 }
 
+#test functions
 sub TEST_DB_CONNECT : Test(4){
 	my $loader = Bio::Chado::Loader::GFF3->new();
 	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
@@ -31,7 +33,7 @@ sub TEST_DB_CONNECT : Test(4){
     is($loader->schema->resultset('Sequence::Feature')->count,2589668,'got correct nof rows in feature table');
 }
 
-sub TEST_DB_QUERY : Test(7){
+sub TEST_DB_ORG : Test(7){
 	my $loader = Bio::Chado::Loader::GFF3->new();
 	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
 	ok($loader->db_user('test_usr'),'assigned user');
@@ -107,7 +109,6 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	ok($loader->db_user('test_usr'),'assigned user');
 	ok($loader->db_pass('test_usr'),'assigned pw');
 	ok($loader->organism_name('Solanum lycopersicum'), 'assigned org name');
-	is($loader->organism_exists() , 1, 'got correct org id from org table');
 	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
 	run_time(); mem_used();
 	ok($loader->populate_cache(), 'populated cache');
@@ -161,5 +162,3 @@ sub TEST_mRNA_HANDLER_NOEXON: Tests{
 
 #$ENV{TEST_METHOD} = 'TEST_DB_CONNECT'; #set regex for routine(s) to run
 __PACKAGE__->runtests;
-
-
