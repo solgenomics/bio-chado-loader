@@ -195,6 +195,7 @@ sub parse {
 				## parse the FASTA in the filehandle with BioPerl or
 				## however you want.  or ignore it.
 				print "got fasta handle\n";
+				#use bio-chado-loader-fasta to load fasta
 			}
 			elsif ( $item->{directive} eq 'gff-version' ) {
 				print "it says it is GFF version $item->{value}\n";
@@ -508,7 +509,7 @@ sub populate_cache {
     
     my $fl_rs = $self->schema -> resultset('Sequence::Featureloc')->search(
 #    	{ 'organism_id'=> $self->organism_id }, #for full DB
-		{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%Solyc01g1123%'}},#for testing, only 69 floc records
+		{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%Solyc01g1123%'}},#for testing, only 86 floc records
 #		{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only few floc records
     	{ join => [ 'feature' ] , prefetch=> [ 'feature']}
     	);
@@ -538,8 +539,10 @@ sub populate_cache {
 			$count++;
     }
     
-   	print STDERR "Added ".$self->count_feature_uniquename_feature_id_cache().
+   	if($self->debug){
+   		print STDERR "Added ".$self->count_feature_uniquename_feature_id_cache().
     		" records to feature_uniquename_feature_id_cache\n";
+   	}
     
     #create cache hash
     $count = 0;
