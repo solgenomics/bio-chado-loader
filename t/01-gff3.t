@@ -5,11 +5,13 @@ use Test::Class::Most;
 use Bio::Chado::Loader::GFF3;
 #use Carp::Always;
 
-sub TEST_ITAG1_GENOMIC_REF : Test(3) {
+sub TEST_ITAG1_GENOMIC_REF : Test(5) {
     my $loader = Bio::Chado::Loader::GFF3->new(
         file_name => "t/data/ITAG1_genomic_ref_sample.gff3",
     );
     isa_ok($loader, 'Bio::Chado::Loader::GFF3');
+    is($loader->has_file_name(),1,'file name present');
+    is($loader->file_name(),"t/data/ITAG1_genomic_ref_sample.gff3",'checked file name');
     $loader->parse();
     is($loader->count_cvterms_gff, 2, 'found 2 unique cvterms');
     is($loader->count_features_gff, 4, 'found 4 unique features');
