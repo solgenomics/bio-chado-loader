@@ -44,10 +44,11 @@ sub TEST_DB_ORG : Test(7){
 	is($loader->organism_exists() , 2363,'got correct org id from org table');
 }
 
-sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(8){
+sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(9){
 	my $loader = Bio::Chado::Loader::GFF3->new(
         file_name => "t/data/db_unknown_parent.gff3",
     );
+    ok($loader->debug(1), 'set debug verbosity flag');
     
     #Create cache first and then parse GFF 
 	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
