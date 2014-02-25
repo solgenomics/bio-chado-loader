@@ -112,6 +112,7 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	ok($loader->organism_name('Solanum lycopersicum'), 'assigned org name');
 	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
 	run_time(); mem_used();
+	#Call populate_cache() before parse() in case parents are not in GFF but in DB already
 	ok($loader->populate_cache(), 'populated cache');
 	#Remove count test before public release since DB specific
 	is($loader->count_feature_uniquename_feature_id_cache(),1275149,'correct number of features read from DB into cache');
