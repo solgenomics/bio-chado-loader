@@ -166,7 +166,7 @@ sub TEST_mRNA_HANDLER_NOEXON: Tests{
 
 sub TEST_DB_DELETE_Solyc01g112300 : Tests{
 	my $loader = Bio::Chado::Loader::GFF3->new(
-        file_name => "t/data/Solyc01g112300.2.gff3_noexon",
+        file_name => "t/data/Solyc01g112300.2.gff3",
     );
     isa_ok($loader, 'Bio::Chado::Loader::GFF3');
     ok($loader->debug(1), 'set debug verbosity flag');
