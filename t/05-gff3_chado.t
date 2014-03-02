@@ -93,7 +93,7 @@ sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(9){
 #    );
 #    run_time(); mem_used();
 #    
-#	ok($cnt=$loader->prepare_bulk_upload(), 'loaded data structures and wrote exception file');
+#	ok($cnt=$loader->prepare_bulk_operation(), 'loaded data structures and wrote exception file');
 #	print STDERR 'Prepped '.$cnt." recs for insertion\n";
 #	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc')
 #}
@@ -136,7 +136,7 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
     );
     run_time(); mem_used();
     my $cnt;
-	ok($cnt=$loader->prepare_bulk_upload(), 'loaded data structures and wrote exception file');
+	ok($cnt=$loader->prepare_bulk_operation(), 'loaded data structures and wrote exception file');
 	is($loader->count_feature_ids_uniquenames_gff(),8,'recorded 8 pairs in feature_ids_uniquenames_gff hash');
 	print STDERR 'Prepped '.$cnt." recs for insertion\n";
 	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc')
@@ -162,6 +162,37 @@ sub TEST_mRNA_HANDLER_NOEXON: Tests{
     isa_ok($loader, 'Bio::Chado::Loader::GFF3');
     $loader->parse();
     $loader->dump_features_gff();
+}
+
+sub TEST_DB_DELETE_Solyc01g112300 : Tests{
+	my $loader = Bio::Chado::Loader::GFF3->new(
+        file_name => "t/data/Solyc01g112300.2.gff3_noexon",
+    );
+    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
+    ok($loader->debug(1), 'set debug verbosity flag');
+    ok($loader->delete(1), 'set DELETION flag');
+    
+    #Connect 
+	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
+	ok($loader->db_user('test_usr'),'assigned user');
+	ok($loader->db_pass('test_usr'),'assigned pw');
+	ok($loader->organism_name('Solanum lycopersicum'), 'assigned org name');
+	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
+	#Call populate_cache() before parse() in case parents are not in GFF but in DB already
+	ok($loader->populate_cache(), 'populated cache');
+	run_time(); mem_used();
+
+    $loader->parse(); #only genes, mRNAs, exons, introns and  polypeptides
+	#$loader->dump_features_gff();
+
+    run_time(); mem_used();
+    my $cnt;
+	ok($cnt=$loader->prepare_bulk_operation(), 'loaded data structures and wrote exception file');
+	is($loader->count_feature_ids_uniquenames_gff(),8,'recorded 8 pairs in feature_ids_uniquenames_gff hash');
+	
+	#NOTE: Do not create exons or polypeptide in mRNA_handler if features deleted manually already during testing
+	print STDERR 'Prepped '.$cnt." recs for DELETION\n";
+    ok($loader->bulk_delete(),'DELETED rows from featureloc and decremented locgroups of remaining featureloc\'s')
 }
 
 
