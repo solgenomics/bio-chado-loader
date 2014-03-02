@@ -246,7 +246,7 @@ sub parse_feature {
 	my $self         = shift;
 	my $feature_hash = shift;
 	
-	warn [Dumper $feature_hash];
+	#warn [Dumper $feature_hash];
 
 	# add data
 	if ($self->features_gff_exists(       $feature_hash->{'attributes'}->{'ID'}->[0]))
@@ -904,11 +904,6 @@ sub bulk_featureloc_delete {
 	my ($self) = @_;
 
 	#$self->schema->storage->debug(1);##SQL statement
-#	print STDERR "Contents of feature_ids_uniquenames_gff\n";
-#	warn Dumper[$self->feature_ids_uniquenames_gff];
-#	print STDERR "Contents of features_gff\n";
-#	warn Dumper[$self->features_gff];
-	
 	
 	while ( my ( $feature_id, $feature_uniquename ) = each $self->feature_ids_uniquenames_gff ){
 
@@ -931,8 +926,6 @@ sub bulk_featureloc_delete {
 			  #{ join => [ 'feature' ] , prefetch=> [ 'feature']},
 			  { join => [ 'feature' ]},
 			)->single()->locgroup();
-			
-			if($self->debug){print STDERR $locgroup."\n";}	
 			
 			my $decrement_locgroup_sql = sub {
 				
