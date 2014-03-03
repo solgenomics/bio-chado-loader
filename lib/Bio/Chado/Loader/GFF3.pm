@@ -447,9 +447,6 @@ sub parse_mRNA_feature {
 				seq_id => $feature_hash->{'seq_id'},
 				source => $feature_hash->{'source'},
 				type   => 'exon',
-
-				#start  => '23486',
-				#end    => '48209',
 				score      => undef,
 				strand     => $feature_hash->{'strand'},
 				phase      => undef,
@@ -547,9 +544,10 @@ sub populate_cache {
 		#    	{ 'organism_id'=> $self->organism_id }, #for full DB
 		{
 		   'organism_id'        => $self->organism_id,
-		   'feature.uniquename' => { 'like', '%Solyc01g1123%' }
-		},    #for testing, only 86 floc records
-#		{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only few floc records
+		   #'feature.uniquename' => { 'like', '%Solyc01g1123%' } #for testing, only 86 floc records
+		   'feature.uniquename' => { 'like', '%Solyc01g%' }, #50684 floc records
+		},    
+		#{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only few floc records
 		{ join => ['feature'], prefetch => ['feature'] });
 
 	my $ft_rs = $self->schema->resultset('Sequence::Feature')->search(
@@ -897,6 +895,7 @@ sub bulk_delete {
 DELETE content from featureloc in DB from in-memory data structures using transactions. 
 DB remains unmodified in case of update error. Decrements locgroup of all remaining 
 featureloc records for the feature with locgroups higher than the deleted record. 
+Returns the number of floc records successfully deleted.
 
 =cut
 
@@ -904,7 +903,7 @@ sub bulk_featureloc_delete {
 	my ($self) = @_;
 
 	#$self->schema->storage->debug(1);##SQL statement
-	
+	my $counter=0;
 	while ( my ( $feature_id, $feature_uniquename ) = each $self->feature_ids_uniquenames_gff ){
 
 			my $srcfeature_id = $self-> schema -> resultset('Sequence::Feature')->search(
@@ -972,7 +971,9 @@ sub bulk_featureloc_delete {
 		
 				print STDERR "Error: " . $_;
 			  };
+			  $counter++;
 	}
+	return $counter;
 }
 
 ###

@@ -139,7 +139,8 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	ok($cnt=$loader->prepare_bulk_operation(), 'loaded data structures and wrote exception file');
 	is($loader->count_feature_ids_uniquenames_gff(),8,'recorded 8 pairs in feature_ids_uniquenames_gff hash');
 	print STDERR 'Prepped '.$cnt." recs for insertion\n";
-	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc')
+	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc');
+	run_time(); mem_used();
 }
 
 sub TEST_mRNA_HANDLER: Tests{
@@ -164,9 +165,10 @@ sub TEST_mRNA_HANDLER_NOEXON: Tests{
     $loader->dump_features_gff();
 }
 
-sub TEST_DB_DELETE_Solyc01g112300 : Tests{
+sub TEST_DB_DELETE : Tests{
 	my $loader = Bio::Chado::Loader::GFF3->new(
-        file_name => "t/data/Solyc01g112300.2.gff3",
+        #file_name => "t/data/Solyc01g112300.2.gff3",
+        file_name => "t/data/ch01_1000genes.gff3",
     );
     isa_ok($loader, 'Bio::Chado::Loader::GFF3');
     ok($loader->debug(1), 'set debug verbosity flag');
@@ -180,21 +182,43 @@ sub TEST_DB_DELETE_Solyc01g112300 : Tests{
 	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
 	#Call populate_cache() before parse() in case parents are not in GFF but in DB already
 	ok($loader->populate_cache(), 'populated cache');
-	run_time(); mem_used();
 
     $loader->parse(); #only genes, mRNAs, exons, introns and  polypeptides
 	#$loader->dump_features_gff();
-
-    run_time(); mem_used();
     my $cnt;
 	ok($cnt=$loader->prepare_bulk_operation(), 'loaded data structures and wrote exception file');
-	is($loader->count_feature_ids_uniquenames_gff(),8,'recorded 8 pairs in feature_ids_uniquenames_gff hash');
 	
 	#NOTE: Do not create exons or polypeptide in mRNA_handler if features deleted manually already during testing
 	print STDERR 'Prepped '.$cnt." recs for DELETION\n";
-    ok($loader->bulk_delete(),'DELETED rows from featureloc and decremented locgroups of remaining featureloc\'s')
+    ok($cnt=$loader->bulk_delete(),'DELETED rows from featureloc and decremented locgroups of remaining featureloc\'s');
+    print STDERR 'bulk_delete returned '.$cnt."\n";
+    run_time(); mem_used();
 }
 
+sub TEST_DB_INSERT : Tests{
+	my $loader = Bio::Chado::Loader::GFF3->new(
+        #file_name => "t/data/Solyc01g112300.2.gff3",
+        file_name => "t/data/ch01_1000genes.gff3",
+    );
+    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
+    ok($loader->debug(1), 'set debug verbosity flag');
+    
+    #Create cache first and then parse GFF 
+	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
+	ok($loader->db_user('test_usr'),'assigned user');
+	ok($loader->db_pass('test_usr'),'assigned pw');
+	ok($loader->organism_name('Solanum lycopersicum'), 'assigned org name');
+	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
+	#Call populate_cache() before parse() in case parents are not in GFF but in DB already
+	ok($loader->populate_cache(), 'populated cache');
+
+    $loader->parse();
+    my $cnt;
+	ok($cnt=$loader->prepare_bulk_operation(), 'loaded data structures and wrote exception file');
+	print STDERR 'Prepped '.$cnt." recs for insertion\n";
+	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc');
+	run_time(); mem_used();
+}
 
 #$ENV{TEST_METHOD} = 'TEST_DB_CONNECT'; #set regex for routine(s) to run
 __PACKAGE__->runtests;
