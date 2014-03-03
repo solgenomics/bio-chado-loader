@@ -170,7 +170,6 @@ sub TEST_DB_DELETE : Tests{
         #file_name => "t/data/Solyc01g112300.2.gff3",
         file_name => "t/data/ch01_1000genes.gff3",
     );
-    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
     ok($loader->debug(1), 'set debug verbosity flag');
     ok($loader->delete(1), 'set DELETION flag');
     
@@ -191,7 +190,7 @@ sub TEST_DB_DELETE : Tests{
 	#NOTE: Do not create exons or polypeptide in mRNA_handler if features deleted manually already during testing
 	print STDERR 'Prepped '.$cnt." recs for DELETION\n";
     ok($cnt=$loader->bulk_delete(),'DELETED rows from featureloc and decremented locgroups of remaining featureloc\'s');
-    print STDERR 'bulk_delete returned '.$cnt."\n";
+    print STDERR 'bulk_delete deleted '.$cnt." records\n";
     run_time(); mem_used();
 }
 
@@ -200,7 +199,6 @@ sub TEST_DB_INSERT : Tests{
         #file_name => "t/data/Solyc01g112300.2.gff3",
         file_name => "t/data/ch01_1000genes.gff3",
     );
-    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
     ok($loader->debug(1), 'set debug verbosity flag');
     
     #Create cache first and then parse GFF 
