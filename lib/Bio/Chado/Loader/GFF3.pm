@@ -539,6 +539,15 @@ sub populate_cache {
     	Please correct this in your database before running this script.
     	This typically happens when the GMOD bulk loader is used to add the 
     	same feature more than once. Exiting..." if $ft_auto_err_rs->count() > 0;
+    
+    my $uniquename_condition = "\%-||feature_id";
+    my $ft_uniquename_err_rs = $self->schema->resultset('Sequence::Feature')->search(
+									 {
+									   'me.organism_id' => $self->organism_id,
+									   'me.uniquename'  => { 'like', "\'%-\'||feature_id" }, TOTEST
+									   'type.name'      =>
+										 [ keys %{ $self->cvterms_gff } ],
+									 },);
 
 	my $fl_rs = $self->schema->resultset('Sequence::Featureloc')->search(
 		#    	{ 'organism_id'=> $self->organism_id }, #for full DB
