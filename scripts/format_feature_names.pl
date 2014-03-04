@@ -39,15 +39,21 @@ if ( !$opt_s || !$opt_u || !$opt_p || !$opt_o ) {
 }
 
 #prep input data
-my $organism = $opt_o;
-
-my $gff_updated_file = $opt_u;
-my $gff_updated      = read_file($gff_updated_file)
-  or die "Could not open updated GFF file: $gff_updated_file\n";
-my $fasta_updated_file;
+my $organism = $opt_o; chomp $organism;
+my $dsn = $opt_s; chomp $dsn;
+my $user = $opt_u; chomp $user;
+my $pass = $opt_p; chomp $pass;
 
 if ($opt_d) {
 	print STDERR "Params parsed..\n";
+}
+
+
+my $schema= Bio::Chado::Schema->connect($dsn, $user, $pass);
+if (!$schema) { die "No schema is avaiable! \n"; }
+
+if ($opt_d) {
+	$schema->storage->debug(1);# print SQL statements
 }
 
 
@@ -70,10 +76,13 @@ sub help {
 
     Description:
 
-     This script corrects feature names if they are formatted like auto<feature_id> or <name>-<feature_id>. This typically happens when the GMOD bulk loader is used to add the same feature more than once.
+     This script corrects feature names if they are formatted like auto<feature_id> or <name>-<feature_id>. 
+     This typically happens when the GMOD bulk loader is used to add the same feature more than once.
      
     NOTE:
-     You need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers need to be correctly formatted for the comparison to work. 
+     You need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID 
+     tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers 
+     need to be correctly formatted for the comparison to work. 
 
     Usage:
       format_feature_names.pl -o ["organism"] -s [DSN string] -u [DB user] -p [password]
