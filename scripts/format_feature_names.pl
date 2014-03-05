@@ -34,7 +34,7 @@ if ($opt_h) {
 	exit;
 }
 if ( !$opt_s || !$opt_u || !$opt_p || !$opt_o ) {
-	print "\nDatabse credentials and organism name are required. See help below\n\n\n";
+	print "\nDatabase credentials and organism name are required. See help below\n\n\n";
 	help();
 }
 

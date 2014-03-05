@@ -35,7 +35,7 @@ if ($opt_h) {
 	exit;
 }
 if ( !$opt_g || !$opt_s || !$opt_u || !$opt_p || !$opt_o ) {
-	print "\nGFF3 file, databse credentials and organism name are required. See help below\n\n\n";
+	print "\nGFF3 file, database credentials and organism name are required. See help below\n\n\n";
 	help();
 }
 
