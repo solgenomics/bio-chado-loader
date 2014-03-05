@@ -251,7 +251,6 @@ sub parse_feature {
 	# add data
 	if ($self->features_gff_exists(       $feature_hash->{'attributes'}->{'ID'}->[0]))
 	{
-
 		#warn Dumper [ $self->features_gff ];
 		die "Multiple features with same ID as "
 		  . $feature_hash->{'attributes'}->{'ID'}->[0]
@@ -608,14 +607,10 @@ sub populate_cache {
 	#create cache hash
 	$count = 0;
 	while ( my $fl_row = $fl_rs->next() ) {
-		if (
-			 $ft_rs->search(
-							 {
+		if ( $ft_rs->search({
 							   'type_id'    => $fl_row->feature->type_id(),
 							   'uniquename' => $fl_row->feature->uniquename
-							 }
-			 )->count() == 1
-		  )
+							 })->count() == 1)
 		{
 			my $ft_row = $ft_rs->search(
 								 {
@@ -641,8 +636,8 @@ sub populate_cache {
 			if ( $count % 100000 == 0 ) {
 				print STDERR "\rprocessing $count";
 
-			#warn Dumper [ $self-> cache -> {$ft_row->type->name()}->{$fl_row->feature->uniquename()}];
-			#warn Dumper [ $self-> cache -> {$ft_row->type->name()}];
+				#warn Dumper [ $self-> cache -> {$ft_row->type->name()}->{$fl_row->feature->uniquename()}];
+				#warn Dumper [ $self-> cache -> {$ft_row->type->name()}];
 				my ( $i, $t );
 				$t = new Proc::ProcessTable;
 				foreach my $got ( @{ $t->table } ) {
