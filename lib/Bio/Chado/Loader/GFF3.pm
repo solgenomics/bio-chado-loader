@@ -522,6 +522,10 @@ CAVEAT: Count may be over estimation if some features have multiple locgroups(e.
 
 sub populate_cache {
 	my ($self) = @_;
+	
+	if ( $self->debug == 2 ) { #very high verbosity
+		$self->schema->storage->debug(1);#print SQL statements
+	}
 
 	#setup DB dsn's
 	#check names for only cvterms read from GFF file
@@ -537,17 +541,23 @@ sub populate_cache {
 
 	die "There are features in database with auto in feature.uniquename field. 
     	Please correct this in your database before running this script.
+    	Use format_feature_names.pl in scripts dir to change the names.
     	This typically happens when the GMOD bulk loader is used to add the 
     	same feature more than once. Exiting..." if $ft_auto_err_rs->count() > 0;
     
-    my $uniquename_condition = "\%-||feature_id";
+    my $uniquename_condition = "like \'%-\'||feature_id";
     my $ft_uniquename_err_rs = $self->schema->resultset('Sequence::Feature')->search(
 									 {
 									   'me.organism_id' => $self->organism_id,
-									   'me.uniquename'  => { 'like', "\'%-\'||feature_id" }, TOTEST
-									   'type.name'      =>
-										 [ keys %{ $self->cvterms_gff } ],
+									   'me.uniquename'  => \$uniquename_condition,
 									 },);
+
+	die "There are features in database with feature_id in feature.uniquename field. 
+    	Please correct this in your database before running this script.
+    	Use format_feature_names.pl in scripts dir to change the names.
+    	This typically happens when the GMOD bulk loader is used to add the 
+    	same feature more than once. Exiting..." if $ft_uniquename_err_rs->count() > 0;
+	
 
 	my $fl_rs = $self->schema->resultset('Sequence::Featureloc')->search(
 		#    	{ 'organism_id'=> $self->organism_id }, #for full DB
@@ -673,17 +683,15 @@ sub prepare_bulk_operation {
 	while ( ( $feature_uniquename, $fields ) = each %{ $self->features_gff } ) {
 
 		#if feature and seq_id/scrfeature in cache, try feature_uniquename_feature_id_cache_exists??
-		if (
-			 ( $self->cache->{ $fields->{'type'} }->{$feature_uniquename} )
+		if (( $self->cache->{ $fields->{'type'} }->{$feature_uniquename} )
 			 && ( $self->feature_uniquename_feature_id_cache
-				  ->{ $fields->{'seq_id'} } )
-		  )
+				  ->{ $fields->{'seq_id'} } ) )
 		{
 
 			#record feature_ids in class var
 			$self->add_feature_ids_uniquenames_gff(
 					 $self->cache->{ $fields->{'type'} }->{$feature_uniquename}
-					   ->{feature_id} => $fields->{'attributes'}->{'ID'}->[0] );
+					   ->{'feature_id'} => $fields->{'attributes'}->{'ID'}->[0] );
 
 			$counters{'inserts'}++;
 			if ( $counters{'inserts'} % 10000 == 0 ) {
