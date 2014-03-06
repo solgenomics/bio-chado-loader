@@ -56,7 +56,36 @@ if ($opt_d) {
 	$schema->storage->debug(1);# print SQL statements
 }
 
+my $organism_id = $schema->resultset('Organism::Organism')->search(
+							{'me.species' => $organism},
+							)->single->organism_id();
 
+
+# auto, polypeptides
+my $ft_polypeptide_rs =  $schema->resultset('Sequence::Feature')
+	  ->search( { 'organism_id' => $organism_id,
+	  			  'type_id' => 22027,
+	  			  'uniquename' => {'like','auto%'}	},);
+
+#update polypeptide uniquename
+my $update_polypeptide_uniquename_sql = sub {
+	my $counter = 0;
+	while ( my $ft_row = $ft_polypeptide_rs->next() ) {
+		$ft_row->set_column('uniquename' => ( 'polypeptide:'.$ft_row->get_column('name') ) );
+		$ft_row->update();
+		$counter++;
+	}
+	print STDERR "$counter feature.uniquename rows for polypeptide records updated\n\n\n";
+};
+try {
+	$schema->txn_do($update_polypeptide_uniquename_sql);
+	}
+	catch {# Transaction failed
+		die "Could not update feature.uniquename for polypeptide records. Error: $!"
+		if ( $_ =~ /Rollback failed/ );
+		print STDERR "Error: " . $_;
+	  };
+	  
 
 
 
