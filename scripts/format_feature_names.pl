@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-validate_gff.pl
+format_feature_gff.pl
 
 =head1 SYNOPSIS
 
@@ -16,6 +16,14 @@ format_feature_names.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [passw
  -o  Organism name in quotes e.g. 'Solanum lycopersicum' (required)
  -d  Debug messages (0 or 1)
  -h  Help
+
+=head1 CAVEATS
+
+TODO Add -t option to test script. Compare uniquename pre and post fix. 
+
+=head1 AVAILABLITY
+
+https://github.com/solgenomics/bio-chado-loader/blob/master/scripts/format_feature_names.pl
 
 =cut
 
@@ -185,7 +193,7 @@ EOF
 
   Same as Perl.
 
-=head1 AUTHORS
+=head1 AUTHOR
 
   Surya Saha <suryasaha@cornell.edu , @SahaSurya>
 

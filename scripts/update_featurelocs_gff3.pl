@@ -2,13 +2,13 @@
 
 =head1 NAME
 
-validate_gff.pl
+update_featurelocs_gff.pl
 
 =head1 SYNOPSIS
 
 update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [password] -g [GFF3 file]
 
-=head1 COMMAND-LINE OPTIONS
+=head1 ARGUMENTS
 
  -g  GFF3 file for updating locations (required)
  -s  Database connection string e.g. "dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432" (required)
@@ -17,6 +17,10 @@ update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [pas
  -o  Organism name in quotes e.g. 'Solanum lycopersicum' (required)
  -d  Debug messages (0 or 1)
  -h  Help
+
+=head1 AVAILABLITY
+
+https://github.com/solgenomics/bio-chado-loader/blob/master/scripts/update_featurelocs_gff.pl
 
 =cut
 
@@ -100,7 +104,7 @@ EOF
 
   Same as Perl.
 
-=head1 AUTHORS
+=head1 AUTHOR
 
   Surya Saha <suryasaha@cornell.edu , @SahaSurya>
 
