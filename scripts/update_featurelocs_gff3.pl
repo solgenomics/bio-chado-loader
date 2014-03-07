@@ -8,7 +8,13 @@ update_featurelocs_gff.pl
 
 update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [password] -g [GFF3 file]
 
-=head1 ARGUMENTS
+=head1 DESCRIPTION
+
+ The new chromosome backbone has to be loaded into the database using the GMOD bulk loader before new
+     coordinates can be added. The source feature is required to be present before any new featurelocs
+     can be placed on it.
+
+=head2 ARGUMENTS
 
  -g  GFF3 file for updating locations (required)
  -s  Database connection string e.g. "dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432" (required)
@@ -18,9 +24,14 @@ update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [pas
  -d  Debug messages (0 or 1)
  -h  Help
 
+=head1 CAVEATS
+
+ Will break if no ID field in attributes in GFF record 
+ TODO Add -t option to test script. Compare featurelocs pre and post edit. 
+
 =head1 AVAILABLITY
 
-https://github.com/solgenomics/bio-chado-loader/blob/master/scripts/update_featurelocs_gff.pl
+ https://github.com/solgenomics/bio-chado-loader/blob/master/scripts/update_featurelocs_gff.pl
 
 =cut
 

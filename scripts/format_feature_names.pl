@@ -6,9 +6,18 @@ format_feature_gff.pl
 
 =head1 SYNOPSIS
 
-format_feature_names.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [password]
+ format_feature_names.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [password]
 
-=head1 COMMAND-LINE OPTIONS
+=head1 DESCRIPTION 
+
+ This script corrects feature names if they are formatted like auto<feature_id> or <name>-<feature_id>. 
+     This typically happens when the GMOD bulk loader is used to add the same feature more than once.
+     You need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID 
+     tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers 
+     need to be correctly formatted for the comparison to work.
+ 
+
+=head2 ARGUMENTS
 
  -s  Database connection string e.g. "dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432" (required)
  -u  Database user name (required)
@@ -19,11 +28,17 @@ format_feature_names.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [passw
 
 =head1 CAVEATS
 
-TODO Add -t option to test script. Compare uniquename pre and post fix. 
+ This script *only* fixes the following
+     1. feature.uniquenames with auto for polypeptide features.
+     2. feature.uniquenames with feature_id suffix for gene,mRNA,exon,intron features.
+     
+     bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your 
+     GFF file.
+ TODO Add -t option to test script. Compare uniquename pre and post fix. 
 
 =head1 AVAILABLITY
 
-https://github.com/solgenomics/bio-chado-loader/blob/master/scripts/format_feature_names.pl
+ https://github.com/solgenomics/bio-chado-loader/blob/master/scripts/format_feature_names.pl
 
 =cut
 
