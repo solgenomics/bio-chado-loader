@@ -86,6 +86,9 @@ try {
 		if ( $_ =~ /Rollback failed/ );
 		print STDERR "Error: " . $_;
 	  };
+if ($opt_d) {
+	print STDERR "feature.uniquename rows updated for polypeptide records..\n";
+}
 	  
 
 #fix name-feature_id for 'gene','mRNA','exon','intron'
@@ -131,10 +134,9 @@ try {
 		if ( $_ =~ /Rollback failed/ );
 		print STDERR "Error: " . $_;
 	  };
-
-
-
-
+if ($opt_d) {
+	print STDERR "feature.uniquename rows updated for gene,mRNA,exon,intron records..\n";
+}
 
 
 
