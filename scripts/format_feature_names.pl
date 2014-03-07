@@ -154,7 +154,14 @@ sub help {
      tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers 
      need to be correctly formatted for the comparison to work.
     
-
+    NOTE:
+     This script *only* fixes the following
+     1. feature.uniquenames with auto for polypeptide features.
+     2. feature.uniquenames with feature_id suffix for gene,mRNA,exon,intron features.
+     
+     bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your 
+     GFF file. 
+     
 
     Usage:
       format_feature_names.pl -o ["organism"] -s [DSN string] -u [DB user] -p [password]
