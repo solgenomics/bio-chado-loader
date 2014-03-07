@@ -67,7 +67,7 @@ my $ft_polypeptide_rs =  $schema->resultset('Sequence::Feature')
 	  			  'type_id' => 22027,
 	  			  'uniquename' => {'like','auto%'}	},);
 
-#update polypeptide uniquename
+#update polypeptide uniquenames
 my $update_polypeptide_uniquename_sql = sub {
 	my $counter = 0;
 	while ( my $ft_row = $ft_polypeptide_rs->next() ) {
@@ -75,8 +75,9 @@ my $update_polypeptide_uniquename_sql = sub {
 		$ft_row->update();
 		$counter++;
 	}
-	print STDERR "$counter feature.uniquename rows for polypeptide records updated\n\n\n";
+	print STDERR "$counter feature.uniquename rows updated for polypeptide records\n\n\n";
 };
+
 try {
 	$schema->txn_do($update_polypeptide_uniquename_sql);
 	}
@@ -87,7 +88,49 @@ try {
 	  };
 	  
 
+#fix name-feature_id for 'gene','mRNA','exon','intron'
+my $name_condition = "in ('gene','mRNA','exon','intron')";
+my @cv_rs_arr = $schema->resultset('Cv::Cvterm')->search(
+{'name' => \$name_condition},
+{'columns' => [qw/cvterm_id/]}
+)->all();
 
+my @type_ids;
+foreach my $cv_rs (@cv_rs_arr){
+	push @type_ids, $cv_rs->cvterm_id();
+} 
+
+my $uniquename_condition = "like \'%-\'||feature_id";
+my $ft_uniquename_rs = $schema->resultset('Sequence::Feature')->search(
+									 {
+									   'organism_id' => $organism_id,
+									   'uniquename'  => \$uniquename_condition,
+									   'type_id'     => \@type_ids,
+									 },);
+
+#update 'gene','mRNA','exon','intron' uniquenames
+my $update_malformed_uniquename_sql = sub {
+	my $counter = 0;
+	while ( my $ft_row = $ft_uniquename_rs->next() ) {
+		#get uniquename, parse out feature_id, reassign
+		my $feature_id = $ft_row->get_column('feature_id');
+		my $uniquename = $ft_row->get_column('uniquename');
+		$uniquename =~ s/\-$feature_id$//;
+		$ft_row->set_column($uniquename);
+		$ft_row->update();
+		$counter++;
+	}
+	print STDERR "$counter feature.uniquename's updated for gene,mRNA,exon,intron records\n\n\n";
+};
+
+try {
+	$schema->txn_do($update_malformed_uniquename_sql);
+	}
+	catch {# Transaction failed
+		die "Could not update feature.uniquename for gene,mRNA,exon,intron records. Error: $!"
+		if ( $_ =~ /Rollback failed/ );
+		print STDERR "Error: " . $_;
+	  };
 
 
 
@@ -107,11 +150,11 @@ sub help {
 
      This script corrects feature names if they are formatted like auto<feature_id> or <name>-<feature_id>. 
      This typically happens when the GMOD bulk loader is used to add the same feature more than once.
-     
-    NOTE:
      You need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID 
      tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers 
-     need to be correctly formatted for the comparison to work. 
+     need to be correctly formatted for the comparison to work.
+    
+
 
     Usage:
       format_feature_names.pl -o ["organism"] -s [DSN string] -u [DB user] -p [password]
