@@ -34,6 +34,7 @@ format_feature_gff.pl
      
      bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your 
      GFF file.
+     
  TODO Add -t option to test script. Compare uniquename pre and post fix. 
 
 =head1 AVAILABLITY

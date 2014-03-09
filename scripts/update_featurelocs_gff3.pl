@@ -26,7 +26,10 @@ update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [pas
 
 =head1 CAVEATS
 
- Will break if no ID field in attributes in GFF record 
+ This script will break if no ID field is present in attributes in GFF record. This 
+ may be a problem for non-gene/mRNA/exon/intron records although they may conform to 
+ GFF3 standards.
+  
  TODO Add -t option to test script. Compare featurelocs pre and post edit. 
 
 =head1 AVAILABLITY
