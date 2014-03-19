@@ -46,7 +46,6 @@ format_feature_gff.pl
 use strict;
 use warnings;
 
-
 use Try::Tiny;
 use Getopt::Std;
 use Bio::Chado::Schema;
@@ -72,7 +71,6 @@ if ($opt_d) {
 	print STDERR "Params parsed..\n";
 }
 
-
 my $schema= Bio::Chado::Schema->connect($dsn, $user, $pass);
 if (!$schema) { die "No schema is avaiable! \n"; }
 
@@ -83,7 +81,6 @@ if ($opt_d) {
 my $organism_id = $schema->resultset('Organism::Organism')->search(
 							{'me.species' => $organism},
 							)->single->organism_id();
-
 
 # auto, polypeptides
 my $ft_polypeptide_rs =  $schema->resultset('Sequence::Feature')
@@ -164,8 +161,6 @@ if ($opt_d) {
 
 
 
-
-
 #----------------------------------------------------------------------------
 
 sub help {
@@ -216,8 +211,3 @@ EOF
 =cut
 
 __END__
-
-
-
-
-
