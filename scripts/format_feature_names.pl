@@ -143,6 +143,8 @@ my $update_malformed_uniquename_sql = sub {
 		$ft_row->set_column('uniquename' => $uniquename);
 		$ft_row->update();
 		$counter++;
+		
+		if ($counter % 1000 == 0){ print STDERR "Processing $counter\r";}
 	}
 	print STDERR "$counter feature.uniquename's updated for gene,mRNA,exon,intron records\n\n\n";
 };
