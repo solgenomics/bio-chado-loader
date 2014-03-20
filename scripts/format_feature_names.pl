@@ -140,7 +140,7 @@ my $update_malformed_uniquename_sql = sub {
 		my $feature_id = $ft_row->get_column('feature_id');
 		my $uniquename = $ft_row->get_column('uniquename');
 		$uniquename =~ s/\-$feature_id$//;
-		$ft_row->set_column($uniquename);
+		$ft_row->set_column('uniquename' => $uniquename);
 		$ft_row->update();
 		$counter++;
 	}
