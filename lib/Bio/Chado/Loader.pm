@@ -34,6 +34,13 @@ has db_attrs => (
     default => sub { +{} },
 );
 
+has 'organism_name' => (
+	documentation =>
+'exact species of organism, as stored in database, e.g. "Solanum lycopersicum"',
+	is  => 'rw',
+	isa => 'Str',
+);
+
 requires 'schema';
 
 # default _build_schema just connects with the db args.  consuming
