@@ -11,7 +11,8 @@ mx-run Bio::Chado::Loader::FASTA [ options ] fasta_file fasta_file ...
 =head1 DESCRIPTION
 
 This is a MooseX::Runnable class that loads bioinformatics data given
-in FASTA format into a Chado schema.
+in FASTA format into a Chado schema. You will have to run mx-run from 
+the lib directory or include it in @INC using -I
 
 =head2 Options
 
