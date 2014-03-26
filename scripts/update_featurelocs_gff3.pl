@@ -64,7 +64,7 @@ sub run_time {
 use File::Slurp;
 use Try::Tiny;
 use Getopt::Std;
-use Bio::Chado::Schema;
+use Bio::Chado::Loader::GFF3;
 
 our ( $opt_g, $opt_s, $opt_u, $opt_p, $opt_o, $opt_d, $opt_h );
 getopts('g:s:u:p:o:d:h');
@@ -114,9 +114,9 @@ if ($opt_d) {
 my $cnt;
 $cnt=$loader->prepare_bulk_operation();
 print STDERR 'Prepped '.$cnt." recs for insertion\n";
+
 $loader->bulk_upload();
 print STDERR "updated locgroups and inserted new rows into featureloc from $gff_file\n";
-$loader->parse();
 if ($opt_d) {
 	run_time(); mem_used();
 }
