@@ -114,8 +114,8 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	run_time(); mem_used();
 	#Call populate_cache() before parse() in case parents are not in GFF but in DB already
 	ok($loader->populate_cache(), 'populated cache');
-	#Remove count test before public release since DB specific
-	is($loader->count_feature_uniquename_feature_id_cache(),1275149,'correct number of features read from DB into cache');
+	#Removed count test for public release since DB specific
+	#is($loader->count_feature_uniquename_feature_id_cache(),1275149,'correct number of features read from DB into cache');
 	run_time(); mem_used();
 
     $loader->parse();
@@ -143,32 +143,9 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	run_time(); mem_used();
 }
 
-sub TEST_mRNA_HANDLER: Tests{
+sub TEST_DB_DELETE_Solyc01g112300 : Tests{
 	my $loader = Bio::Chado::Loader::GFF3->new(
         file_name => "t/data/Solyc01g112300.2.gff3",
-    );
-    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
-    ok($loader->debug(1), 'set debug verbosity flag');
-    $loader->parse();
-    #only genes, mRNAs, exons, introns and  polypeptides 
-    is($loader->count_cvterms_gff, 5, 'found 5 unique cvterms');
-    is($loader->count_features_gff, 8, 'found 8 unique features');
-    $loader->dump_features_gff();
-}
-
-sub TEST_mRNA_HANDLER_NOEXON: Tests{
-	my $loader = Bio::Chado::Loader::GFF3->new(
-        file_name => "t/data/Solyc01g112300.2.gff3_noexon",
-    );
-    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
-    $loader->parse();
-    $loader->dump_features_gff();
-}
-
-sub TEST_DB_DELETE : Tests{
-	my $loader = Bio::Chado::Loader::GFF3->new(
-        #file_name => "t/data/Solyc01g112300.2.gff3",
-        file_name => "t/data/ch01_100genes.gff3",
     );
     ok($loader->debug(1), 'set debug verbosity flag');
     ok($loader->delete(1), 'set DELETION flag');
@@ -194,9 +171,31 @@ sub TEST_DB_DELETE : Tests{
     run_time(); mem_used();
 }
 
-sub TEST_DB_INSERT : Tests{
+
+sub TEST_mRNA_HANDLER: Tests{
 	my $loader = Bio::Chado::Loader::GFF3->new(
-        #file_name => "t/data/Solyc01g112300.2.gff3",
+        file_name => "t/data/Solyc01g112300.2.gff3",
+    );
+    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
+    ok($loader->debug(1), 'set debug verbosity flag');
+    $loader->parse();
+    #only genes, mRNAs, exons, introns and  polypeptides 
+    is($loader->count_cvterms_gff, 5, 'found 5 unique cvterms');
+    is($loader->count_features_gff, 8, 'found 8 unique features');
+    $loader->dump_features_gff();
+}
+
+sub TEST_mRNA_HANDLER_NOEXON: Tests{
+	my $loader = Bio::Chado::Loader::GFF3->new(
+        file_name => "t/data/Solyc01g112300.2.gff3_noexon",
+    );
+    isa_ok($loader, 'Bio::Chado::Loader::GFF3');
+    $loader->parse();
+    $loader->dump_features_gff();
+}
+
+sub TEST_DB_INSERT_CH01_100 : Tests{
+	my $loader = Bio::Chado::Loader::GFF3->new(
         file_name => "t/data/ch01_100genes.gff3",
     );
     ok($loader->debug(1), 'set debug verbosity flag');
@@ -216,6 +215,34 @@ sub TEST_DB_INSERT : Tests{
 	print STDERR 'Prepped '.$cnt." recs for insertion\n";
 	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc');
 	run_time(); mem_used();
+}
+
+sub TEST_DB_DELETE_CH01_100 : Tests{
+	my $loader = Bio::Chado::Loader::GFF3->new(
+        file_name => "t/data/ch01_100genes.gff3",
+    );
+    ok($loader->debug(1), 'set debug verbosity flag');
+    ok($loader->delete(1), 'set DELETION flag');
+    
+    #Connect 
+	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
+	ok($loader->db_user('test_usr'),'assigned user');
+	ok($loader->db_pass('test_usr'),'assigned pw');
+	ok($loader->organism_name('Solanum lycopersicum'), 'assigned org name');
+	ok($loader->organism_id($loader->organism_exists()), 'assigned org id');
+	#Call populate_cache() before parse() in case parents are not in GFF but in DB already
+	ok($loader->populate_cache(), 'populated cache');
+
+    $loader->parse(); #only genes, mRNAs, exons, introns and  polypeptides
+	#$loader->dump_features_gff();
+    my $cnt;
+	ok($cnt=$loader->prepare_bulk_operation(), 'loaded data structures and wrote exception file');
+	
+	#NOTE: Do not create exons or polypeptide in mRNA_handler if features deleted manually already during testing
+	print STDERR 'Prepped '.$cnt." recs for DELETION\n";
+    ok($cnt=$loader->bulk_delete(),'DELETED rows from featureloc and decremented locgroups of remaining featureloc\'s');
+    print STDERR 'bulk_delete deleted '.$cnt." records\n";
+    run_time(); mem_used();
 }
 
 #$ENV{TEST_METHOD} = 'TEST_DB_CONNECT'; #set regex for routine(s) to run
