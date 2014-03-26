@@ -578,7 +578,7 @@ sub populate__cache {
 		   'organism_id'        => $self->organism_id,
 		   #'feature.uniquename' => { 'like', '%Solyc01g1123%' } #for testing, only 86 floc records
 		   #'feature.uniquename' => { 'like', '%Solyc01g%' }, #50684 floc records
-		   'feature.uniquename' => { 'like', '%Solyc%' }, #389468 floc records
+		   'feature.uniquename' => { 'like', '%Solyc01g0%' }, #?? floc records
 		},    
 		#{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only few floc records
 		{ join => ['feature'], prefetch => ['feature'] });
