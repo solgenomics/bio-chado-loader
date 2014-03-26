@@ -42,12 +42,6 @@ use Bio::GFF3::LowLevel
   qw (gff3_parse_feature  gff3_format_feature gff3_parse_attributes);
 use Try::Tiny;
 
-#has 'schema' => (
-#				  is      => 'rw',
-#				  isa     => 'Bio::Chado::Schema',
-#				  lazy    => 1,
-#				  builder => '_build_schema'
-#);
 has schema => (
     is         => 'rw',
     isa        => 'Bio::Chado::Schema',
@@ -56,16 +50,20 @@ has schema => (
 );
 
 has 'file_name' => (
-					 isa       => 'Str',
-					 is        => 'rw',
-					 predicate => 'has_file_name',
-					 clearer   => 'clear_file_name',
-					 required => 1,
+	documentation =>
+		  'name of gff3 file (required)',
+	isa       => 'Str',
+	is        => 'rw',
+	predicate => 'has_file_name',
+	clearer   => 'clear_file_name',
+	required => 1,
 );
 
 with 'Bio::Chado::Loader';
 
 has '+organism_name' => (
+	documentation =>
+		  'exact species of organism, as stored in database, e.g. "Solanum lycopersicum" (required)',
     required => 1,
 );
 
@@ -90,59 +88,59 @@ has 'delete' => (
 	  default       => 0,
 );
 
-has 'features_gff' => (
-	documentation =>
-'hash of feature uniquename => hashref of entire GFF record. It will break if no ID field in GFF record. uniquenames are used for key since GFF3 mandates they be unique in a GFF3 file.',
+# hash of feature uniquename => hashref of entire GFF record. 
+# It will break if no ID field in GFF record. uniquenames are used for 
+# key since GFF3 mandates they be unique in a GFF3 file.
+has '_features_gff' => (
 	is      => 'ro',
 	isa     => 'HashRef',
 	traits  => ['Hash'],
 	default => sub { {} },
 	handles => {
-				 add_features_gff    => 'set',
-				 count_features_gff  => 'count',
-				 features_gff_exists => 'exists',
+				 add__features_gff    => 'set',
+				 count__features_gff  => 'count',
+				 _features_gff_exists => 'exists',
 	},
 );
 
-=item C<dump_features_gff ()>
+=item C<dump__features_gff ()>
 
-Prints the contents of the features_gff to STDERR. For internal debugging use only. 
+Prints the contents of the _features_gff to STDERR. For internal debugging use only. 
 
 =cut
 
-sub dump_features_gff {
+sub dump__features_gff {
 	my ($self) = @_;
 	my ( $feature_uniquename, $fields );
 
-	while ( ( $feature_uniquename, $fields ) = each %{ $self->features_gff } ) {
+	while ( ( $feature_uniquename, $fields ) = each %{ $self->_features_gff } ) {
 		print STDERR $feature_uniquename . " => "
 		  . gff3_format_feature($fields);
 	}
 }
 
-has 'feature_ids_uniquenames_gff' => (
-	documentation =>
-'hash of featureID => feature_uniquename for all features in GFF that will be updated. Populated in prepare_bulk_operation',
+# hash of featureID => feature_uniquename for all features in GFF 
+# that will be updated. Populated in prepare_bulk_operation
+has '_feature_ids_uniquenames_gff' => (
 	is      => 'ro',
 	isa     => 'HashRef',
 	traits  => ['Hash'],
 	default => sub { {} },
 	handles => {
-				 add_feature_ids_uniquenames_gff   => 'set',
-				 count_feature_ids_uniquenames_gff => 'count',
+				 add__feature_ids_uniquenames_gff   => 'set',
+				 count__feature_ids_uniquenames_gff => 'count',
 	},
 );
 
-has 'cvterms_gff' => (
-	   documentation =>
-		 'hash of cvterm => 1 from GFF. TOFIX Use counts instead of constant 1',
+# hash of cvterm => 1 from GFF. TOFIX Use counts instead of constant 1
+has '_cvterms_gff' => (
 	   is      => 'ro',
 	   isa     => 'HashRef[Str]',
 	   traits  => ['Hash'],
 	   default => sub { {} },
 	   handles => {
-					add_cvterms_gff   => 'set',
-					count_cvterms_gff => 'count',
+					add__cvterms_gff   => 'set',
+					count__cvterms_gff => 'count',
 	   },
 );
 
@@ -154,25 +152,24 @@ has 'is_analysis' => (
 			default => 0,
 );
 
-has 'cache' => (
-	documentation =>
-'hash of cvterm.name => hash of feature.uniquename => feature.feature_id,featureloc.srcfeature_id. Not recording featureloc.locgroup,featureloc.rank',
+# hash of cvterm.name => hash of feature.uniquename => feature.feature_id,featureloc.srcfeature_id. 
+# Not recording featureloc.locgroup,featureloc.rank
+has '_cache' => (
 	is      => 'ro',
 	isa     => 'HashRef',
 	default => sub { {} },
 );
 
-has 'feature_uniquename_feature_id_cache' => (
-		documentation =>
-		  'hash of feature uniquenames => feature_id for all features in cache',
+# hash of feature uniquenames => feature_id for all features in _cache
+has '_feature_uniquename_feature_id_cache' => (
 		is      => 'ro',
 		isa     => 'HashRef',
 		traits  => ['Hash'],
 		default => sub { {} },
 		handles => {
-					 add_feature_uniquename_feature_id_cache    => 'set',
-					 count_feature_uniquename_feature_id_cache  => 'count',
-					 feature_uniquename_feature_id_cache_exists => 'exists'
+					 add__feature_uniquename_feature_id_cache    => 'set',
+					 count__feature_uniquename_feature_id_cache  => 'count',
+					 _feature_uniquename_feature_id_cache_exists => 'exists'
 		},
 );
 
@@ -266,9 +263,9 @@ sub parse_feature {
 	#warn [Dumper $feature_hash];
 
 	# add data
-	if ($self->features_gff_exists(       $feature_hash->{'attributes'}->{'ID'}->[0]))
+	if ($self->_features_gff_exists(       $feature_hash->{'attributes'}->{'ID'}->[0]))
 	{
-		#warn Dumper [ $self->features_gff ];
+		#warn Dumper [ $self->_features_gff ];
 		die "Multiple features with same ID as "
 		  . $feature_hash->{'attributes'}->{'ID'}->[0]
 		  . " found. Exiting..";
@@ -283,10 +280,10 @@ sub parse_feature {
 		return;
 	}
 	else {
-		$self->add_features_gff($feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash );
-		$self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
+		$self->add__features_gff($feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash );
+		$self->add__cvterms_gff( $feature_hash->{'type'} => 1 );
 
-		#warn Dumper [ $self->features_gff ] if $feature_hash->{'attributes'}->{'ID'}->[0]=~ /exon/;
+		#warn Dumper [ $self->_features_gff ] if $feature_hash->{'attributes'}->{'ID'}->[0]=~ /exon/;
 	}
 
 	#recursively calling self for nested child features
@@ -306,7 +303,7 @@ sub parse_feature {
 
 =item C<parse_mRNA_feature ()>
 
-Adds mRNA, exons and polypeptide to features_gff if exons, CDSs and UTRs are present. Adds mRNA and creates exon & polypeptide features with CDS and UTR coordinates if both are present. Dies if only CDS or UTR is present.  
+Adds mRNA, exons and polypeptide to _features_gff if exons, CDSs and UTRs are present. Adds mRNA and creates exon & polypeptide features with CDS and UTR coordinates if both are present. Dies if only CDS or UTR is present.  
 
 =cut
 
@@ -501,8 +498,8 @@ sub parse_mRNA_feature {
 	$feature_hash->{'derived_features'} = [];
 
 	#save mRNA
-	$self->add_features_gff($feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash );
-	$self->add_cvterms_gff( $feature_hash->{'type'} => 1 );
+	$self->add__features_gff($feature_hash->{'attributes'}->{'ID'}->[0] => $feature_hash );
+	$self->add__cvterms_gff( $feature_hash->{'type'} => 1 );
 
 	if ( $self->debug ) {
 		print STDERR "\n";
@@ -511,7 +508,7 @@ sub parse_mRNA_feature {
 
 =item C<organism_exists ()>
 
-Check if organism for GFF3 exists in the Chado database. Return organism::organism.organism_id 
+Check if organism for GFF3 exists in the Chado database. Return organism::organism. organism_id 
 if present otherwise 0. No organism should have id of 0.
 
 =cut
@@ -526,9 +523,9 @@ sub organism_exists {
 	return $org_id ? $org_id : 0;
 }
 
-=item C<populate_cache ()>
+=item C<populate__cache ()>
 
-Populate cache hash with type_id->feature.uniquename->feature.feature_id,featureloc.srcfeature_id,
+Populate _cache hash with type_id->feature.uniquename->feature.feature_id,featureloc.srcfeature_id,
 featureloc.locgroup,featureloc.rank,cvterm.name from cvterm,feature,featureloc relations. Call 
 function before parse() in case parents are not in GFF but in DB already.  
 
@@ -536,7 +533,7 @@ CAVEAT: Count may be over estimation if some features have multiple locgroups(e.
 
 =cut
 
-sub populate_cache {
+sub populate__cache {
 	my ($self) = @_;
 	
 	if ( $self->debug == 2 ) { #very high verbosity
@@ -551,7 +548,7 @@ sub populate_cache {
 									   'me.organism_id' => $self->organism_id,
 									   'me.uniquename'  => { 'like', "%auto%" },
 									   'type.name'      =>
-										 [ keys %{ $self->cvterms_gff } ],
+										 [ keys %{ $self->_cvterms_gff } ],
 									 },
 									 { join => ['type'], prefetch => ['type'] });
 
@@ -606,22 +603,22 @@ sub populate_cache {
 
 	my $count = 0;
 
-	#create feature_uniquename_feature_id_cache
+	#create _feature_uniquename_feature_id_cache
 	while ( my $ft_fname_fid_row = $ft_fname_fid_rs->next() ) {
 
-		#add feature_id to feature_uniquename_feature_id_cache
-		$self->add_feature_uniquename_feature_id_cache(
+		#add feature_id to _feature_uniquename_feature_id_cache
+		$self->add__feature_uniquename_feature_id_cache(
 			  $ft_fname_fid_row->uniquename() => $ft_fname_fid_row->feature_id() );
 		$count++;
 	}
 
 	if ( $self->debug ) {
 		print STDERR "Added "
-		  . $self->count_feature_uniquename_feature_id_cache()
-		  . " records to feature_uniquename_feature_id_cache\n";
+		  . $self->count__feature_uniquename_feature_id_cache()
+		  . " records to _feature_uniquename_feature_id_cache\n";
 	}
 
-	#create cache hash
+	#create _cache hash
 	$count = 0;
 	while ( my $fl_row = $fl_rs->next() ) {
 		if ( $ft_rs->search({
@@ -636,25 +633,25 @@ sub populate_cache {
 								 }
 			)->first();
 
-			$self->cache->{ $ft_row->type->name() }
+			$self->_cache->{ $ft_row->type->name() }
 			  ->{ $fl_row->feature->uniquename() }->{feature_id} =
 			  $fl_row->feature->feature_id();
 
-#			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{locgroup}=$fl_row->locgroup();
-#			$self->cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{rank}=$fl_row->rank();
-			$self->cache->{ $ft_row->type->name() }
+#			$self->_cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{locgroup}=$fl_row->locgroup();
+#			$self->_cache->{$ft_row->type->name()}->{$fl_row->feature->uniquename()}->{rank}=$fl_row->rank();
+			$self->_cache->{ $ft_row->type->name() }
 			  ->{ $fl_row->feature->uniquename() }->{srcfeature_id} =
 			  $fl_row->srcfeature_id();
 
-#			#add feature_id to feature_uniquename_feature_id_cache
-#			$self->add_feature_uniquename_feature_id_cache( $fl_row->feature->uniquename() => $fl_row->feature->feature_id() );
+#			#add feature_id to _feature_uniquename_feature_id_cache
+#			$self->add__feature_uniquename_feature_id_cache( $fl_row->feature->uniquename() => $fl_row->feature->feature_id() );
 
 			$count++;
 			if ( $count % 100000 == 0 ) {
 				print STDERR "\rprocessing $count";
 
-				#warn Dumper [ $self-> cache -> {$ft_row->type->name()}->{$fl_row->feature->uniquename()}];
-				#warn Dumper [ $self-> cache -> {$ft_row->type->name()}];
+				#warn Dumper [ $self-> _cache -> {$ft_row->type->name()}->{$fl_row->feature->uniquename()}];
+				#warn Dumper [ $self-> _cache -> {$ft_row->type->name()}];
 				my ( $i, $t );
 				$t = new Proc::ProcessTable;
 				foreach my $got ( @{ $t->table } ) {
@@ -669,15 +666,15 @@ sub populate_cache {
 "Multiple features found for organism with same type_name and uniquename which violates Chado constraints. Exiting..";
 		}
 	}
-	print STDERR "Added " . $count . " records to cache\n";
+	print STDERR "Added " . $count . " records to _cache\n";
 
 	#return ($count);
 }
 
 =item C<prepare_bulk_operation ()>
 
-Compare %features from GFF to %cache. Prepare data structures to write to DB. GFF %features 
-not found in %cache are written to gff3.exceptions. 
+Compare %features from GFF to %_cache. Prepare data structures to write to DB. GFF %features 
+not found in %_cache are written to gff3.exceptions. 
 
 CAVEAT: Only new featureloc's are handled right now.
 
@@ -686,23 +683,23 @@ CAVEAT: Only new featureloc's are handled right now.
 sub prepare_bulk_operation {
 	my ($self) = @_;
 
-	#compare %features to %cache
+	#compare %features to %_cache
 	my ( $feature_uniquename, $fields, $feature_gff, $disk_exception_str );
 	my %counters = ( 'exceptions' => 0, 'inserts' => 0 );
 	$disk_exception_str = '';
 
-	#warn Dumper [ $self->feature_uniquename_feature_id_cache ];
-	while ( ( $feature_uniquename, $fields ) = each %{ $self->features_gff } ) {
+	#warn Dumper [ $self->_feature_uniquename_feature_id_cache ];
+	while ( ( $feature_uniquename, $fields ) = each %{ $self->_features_gff } ) {
 
-		#if feature and seq_id/scrfeature in cache, try feature_uniquename_feature_id_cache_exists??
-		if (( $self->cache->{ $fields->{'type'} }->{$feature_uniquename} )
-			 && ( $self->feature_uniquename_feature_id_cache
+		#if feature and seq_id/scrfeature in _cache, try _feature_uniquename_feature_id_cache_exists??
+		if (( $self->_cache->{ $fields->{'type'} }->{$feature_uniquename} )
+			 && ( $self->_feature_uniquename_feature_id_cache
 				  ->{ $fields->{'seq_id'} } ) )
 		{
 
 			#record feature_ids in class var
-			$self->add_feature_ids_uniquenames_gff(
-					 $self->cache->{ $fields->{'type'} }->{$feature_uniquename}
+			$self->add__feature_ids_uniquenames_gff(
+					 $self->_cache->{ $fields->{'type'} }->{$feature_uniquename}
 					   ->{'feature_id'} => $fields->{'attributes'}->{'ID'}->[0] );
 
 			$counters{'inserts'}++;
@@ -728,7 +725,7 @@ sub prepare_bulk_operation {
 		close($exception_gff_fh);
 	}
 
-	#warn Dumper [ $self->feature_ids_uniquenames_gff];
+	#warn Dumper [ $self->_feature_ids_uniquenames_gff];
 
 	print STDERR $counters{'inserts'} . " records prepared for bulk operation\n";
 	print STDERR $counters{'exceptions'} . " exception GFF records written to "
@@ -774,7 +771,7 @@ Insert content into featureloc from in-memory data structures into DB using tran
 DB remains unmodified in case of update error.
 
 CAVEAT:
-Gets srcfeature_id from cache which is incorrect if parent was changed. Presuming that 
+Gets srcfeature_id from _cache which is incorrect if parent was changed. Presuming that 
 new location is the primary location of feature (locgroup=0, rank=0). Old locgroups for 
 features being inserted are incremented by 1.
 
@@ -784,8 +781,8 @@ sub bulk_featureloc_upload {
 	my ($self) = @_;
 
 	#$self->schema->storage->debug(1);##SQL statement
-	#warn Dumper[keys $self->feature_ids_uniquenames_gff];
-	my @feature_ids_to_update = keys( $self->feature_ids_uniquenames_gff );
+	#warn Dumper[keys $self->_feature_ids_uniquenames_gff];
+	my @feature_ids_to_update = keys( $self->_feature_ids_uniquenames_gff );
 	my $fl_rs                 =
 	  $self->schema->resultset('Sequence::Featureloc')
 	  ->search( { 'feature_id' => \@feature_ids_to_update },
@@ -795,33 +792,33 @@ sub bulk_featureloc_upload {
 	my $create_sql = sub {
 		my $counter = 0;
 		while ( my ( $feature_id, $feature_uniquename ) =
-				each $self->feature_ids_uniquenames_gff )
+				each $self->_feature_ids_uniquenames_gff )
 		{
 			my ( $strand, $phase );
 
-			if ( $self->features_gff->{$feature_uniquename}->{'strand'} eq '+' )
+			if ( $self->_features_gff->{$feature_uniquename}->{'strand'} eq '+' )
 			{$strand = 1;}
-			elsif ($self->features_gff->{$feature_uniquename}->{'strand'} eq '-' )
+			elsif ($self->_features_gff->{$feature_uniquename}->{'strand'} eq '-' )
 			{$strand = -1;}
 			else { $strand = 0; }
 
-			if ( $self->features_gff->{$feature_uniquename}->{'phase'} ) {
+			if ( $self->_features_gff->{$feature_uniquename}->{'phase'} ) {
 				$fl_rs->create(
 					{
 					   'feature_id' => $feature_id,
 
-						#getting srcfeature_id from cache which is incorrect if parent was changed
-						#'srcfeature_id' => $self->cache->{$self->features_gff->{$feature_uniquename}->{'type'}}
+						#getting srcfeature_id from _cache which is incorrect if parent was changed
+						#'srcfeature_id' => $self->_cache->{$self->_features_gff->{$feature_uniquename}->{'type'}}
 						#	->{$feature_uniquename}->{srcfeature_id},
 		
-						#get feature_id of seq_id from feature_uniquename_feature_id_cache
-					   'srcfeature_id' =>	 $self->feature_uniquename_feature_id_cache->{
-										   $self->features_gff->{$feature_uniquename}->{'seq_id'}
+						#get feature_id of seq_id from _feature_uniquename_feature_id_cache
+					   'srcfeature_id' =>	 $self->_feature_uniquename_feature_id_cache->{
+										   $self->_features_gff->{$feature_uniquename}->{'seq_id'}
 										 },
-					   'fmin' => $self->features_gff->{$feature_uniquename}->{'start'} - 1,
-					   'fmax' => $self->features_gff->{$feature_uniquename}->{'end'},
+					   'fmin' => $self->_features_gff->{$feature_uniquename}->{'start'} - 1,
+					   'fmax' => $self->_features_gff->{$feature_uniquename}->{'end'},
 					   'strand' => $strand,
-					   'phase'  => $self->features_gff->{$feature_uniquename}->{'phase'},
+					   'phase'  => $self->_features_gff->{$feature_uniquename}->{'phase'},
 					   'locgroup' => 0,
 					   'rank'     => 0,
 					}
@@ -832,16 +829,16 @@ sub bulk_featureloc_upload {
 					{
 					   'feature_id' => $feature_id,
 
-				#getting srcfeature_id from cache which is incorrect if parent was changed
-				#'srcfeature_id' => $self->cache->{$self->features_gff->{$feature_uniquename}->{'type'}}
+				#getting srcfeature_id from _cache which is incorrect if parent was changed
+				#'srcfeature_id' => $self->_cache->{$self->_features_gff->{$feature_uniquename}->{'type'}}
 				#	->{$feature_uniquename}->{srcfeature_id},
 
-				#get feature_id of seq_id from feature_uniquename_feature_id_cache
-					   'srcfeature_id' => $self->feature_uniquename_feature_id_cache->{
-										   $self->features_gff->{$feature_uniquename}->{'seq_id'}
+				#get feature_id of seq_id from _feature_uniquename_feature_id_cache
+					   'srcfeature_id' => $self->_feature_uniquename_feature_id_cache->{
+										   $self->_features_gff->{$feature_uniquename}->{'seq_id'}
 										 },
-					   'fmin' => $self->features_gff->{$feature_uniquename}->{'start'} - 1,
-					   'fmax' => $self->features_gff->{$feature_uniquename}->{'end'},
+					   'fmin' => $self->_features_gff->{$feature_uniquename}->{'start'} - 1,
+					   'fmax' => $self->_features_gff->{$feature_uniquename}->{'end'},
 					   'strand'   => $strand,
 					   'locgroup' => 0,
 					   'rank'     => 0,
@@ -889,7 +886,7 @@ sub bulk_delete {
 
 	#check with user
 	my $input;
-	print STDERR "Are you sure you want to delete ".$self->count_feature_ids_uniquenames_gff()." rows (yes/no) : ";
+	print STDERR "Are you sure you want to delete ".$self->count__feature_ids_uniquenames_gff()." rows (yes/no) : ";
 	while ($input=<>) {
 		last if ( ( $input eq "yes\n" ) or ( $input eq "no\n" ) );
 		print STDERR "Please enter yes or no : ";
@@ -933,12 +930,12 @@ sub bulk_featureloc_delete {
 
 	#$self->schema->storage->debug(1);##SQL statement
 	my $counter=0;
-	while ( my ( $feature_id, $feature_uniquename ) = each $self->feature_ids_uniquenames_gff ){
+	while ( my ( $feature_id, $feature_uniquename ) = each $self->_feature_ids_uniquenames_gff ){
 
 			my $srcfeature_id = $self-> schema -> resultset('Sequence::Feature')->search(
 			{
 			  'organism_id'=> $self->organism_id , 
-			  'uniquename' => { 'like', $self->features_gff->{$feature_uniquename}->{'seq_id'} },
+			  'uniquename' => { 'like', $self->_features_gff->{$feature_uniquename}->{'seq_id'} },
 			  },
 			  {columns => [qw/feature_id/]},
 			)->single()->feature_id();
@@ -947,8 +944,8 @@ sub bulk_featureloc_delete {
 			{
 				'feature.organism_id'=> $self->organism_id ,
 				'feature.uniquename' => $feature_uniquename,
-				'fmin' => $self->features_gff->{$feature_uniquename}->{'start'} - 1,
-				'fmax' => $self->features_gff->{$feature_uniquename}->{'end'},
+				'fmin' => $self->_features_gff->{$feature_uniquename}->{'start'} - 1,
+				'fmax' => $self->_features_gff->{$feature_uniquename}->{'end'},
 				'srcfeature_id' => $srcfeature_id,
 			},
 			  #{ join => [ 'feature' ] , prefetch=> [ 'feature']},
@@ -976,8 +973,8 @@ sub bulk_featureloc_delete {
 				my $retval = $self -> schema -> resultset('Sequence::Featureloc')->search(
 				{
 				  'feature_id' => $feature_id,
-				  'fmin' => $self->features_gff->{$feature_uniquename}->{'start'} - 1,
-				  'fmax' => $self->features_gff->{$feature_uniquename}->{'end'},
+				  'fmin' => $self->_features_gff->{$feature_uniquename}->{'start'} - 1,
+				  'fmax' => $self->_features_gff->{$feature_uniquename}->{'end'},
 				  'srcfeature_id' => $srcfeature_id,
 				  'locgroup' => $locgroup,
 				  },
