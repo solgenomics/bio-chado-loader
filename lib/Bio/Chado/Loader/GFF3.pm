@@ -660,6 +660,10 @@ sub populate__cache {
 					$i = $got->size;
 				}
 				print STDERR "\nMemory used: " . ( $i / 1024 / 1024 ) . "MB \n";
+				my ( $user_t, $system_t, $cuser_t, $csystem_t );
+				( $user_t, $system_t, $cuser_t, $csystem_t ) = times;
+				print STDERR "System time used: $system_t\n";
+				print STDERR "User time used: $user_t\n";
 			}
 		}
 		else {
