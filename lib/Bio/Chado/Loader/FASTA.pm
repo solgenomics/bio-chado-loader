@@ -43,7 +43,9 @@ has schema => (
 with 'Bio::Chado::Loader';
 
 has '+organism_name' => (
-    required => 1,
+	documentation =>
+		  'exact species of organism, as stored in database, e.g. "Solanum lycopersicum" (required)',
+	required => 1,
 );
 
 has '+db_attrs' => (
