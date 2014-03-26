@@ -18,8 +18,9 @@ This is a MooseX::Runnable class that loads feature data given in GFF3 format in
 The GFF3 spec is available online at L<http://www.sequenceontology.org/gff3.shtml>
 
 The new chromosome backbone has to be loaded into the database using the GMOD bulk loader before new 
-coordinates can be added. The source feature is required to be present before any new featurelocs 
-can be placed on it.
+coordinates can be added. You can also use Bio::Chado::Loader::Fasta and create new features during 
+the process using --create_features. The source feature is required to be present before any new 
+featurelocs can be placed on it.
 
 CAVEAT
 Will break if no ID field in attributes in GFF record
@@ -33,17 +34,25 @@ require Bio::GFF3::LowLevel::Parser;
 use Moose;
 with 'MooseX::Runnable';
 with 'MooseX::Getopt';
+
+use namespace::autoclean;
 use Proc::ProcessTable;
 use Bio::GFF3::LowLevel::Parser;
 use Bio::GFF3::LowLevel
   qw (gff3_parse_feature  gff3_format_feature gff3_parse_attributes);
 use Try::Tiny;
 
-has 'schema' => (
-				  is      => 'rw',
-				  isa     => 'Bio::Chado::Schema',
-				  lazy    => 1,
-				  builder => '_build_schema'
+#has 'schema' => (
+#				  is      => 'rw',
+#				  isa     => 'Bio::Chado::Schema',
+#				  lazy    => 1,
+#				  builder => '_build_schema'
+#);
+has schema => (
+    is         => 'rw',
+    isa        => 'Bio::Chado::Schema',
+    traits     => ['NoGetopt'],
+    lazy_build => 1,
 );
 
 has 'file_name' => (
@@ -53,12 +62,18 @@ has 'file_name' => (
 					 clearer   => 'clear_file_name'
 );
 
-has 'organism_name' => (
-	documentation =>
-'exact species of organism, as stored in database, e.g. "Solanum lycopersicum"',
-	is  => 'rw',
-	isa => 'Str',
-);
+#has 'organism_name' => (
+#	documentation =>
+#'exact species of organism, as stored in database, e.g. "Solanum lycopersicum"',
+#	is  => 'rw',
+#	isa => 'Str',
+#);
+
+with 'Bio::Chado::Loader';
+
+#has '+organism_name' => (
+#    required => 1,
+#);
 
 has 'organism_id' => (
 		documentation =>
@@ -166,8 +181,6 @@ has 'feature_uniquename_feature_id_cache' => (
 					 feature_uniquename_feature_id_cache_exists => 'exists'
 		},
 );
-
-with 'Bio::Chado::Loader';
 
 use autodie qw(:all);
 use Data::Dumper;
