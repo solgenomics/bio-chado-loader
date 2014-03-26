@@ -30,7 +30,7 @@ sub TEST_DB_CONNECT : Test(4){
 	ok($loader->db_dsn("dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432"),'assigned dsn');
 	ok($loader->db_user('test_usr'),'assigned user');
 	ok($loader->db_pass('test_usr'),'assigned pw');
-    is($loader->schema->resultset('Sequence::Feature')->count,2589670,'got correct nof rows in feature table');
+    #is($loader->schema->resultset('Sequence::Feature')->count,2589670,'got correct nof rows in feature table');
 }
 
 sub TEST_DB_ORG : Test(7){
