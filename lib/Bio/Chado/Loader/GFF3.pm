@@ -59,21 +59,15 @@ has 'file_name' => (
 					 isa       => 'Str',
 					 is        => 'rw',
 					 predicate => 'has_file_name',
-					 clearer   => 'clear_file_name'
+					 clearer   => 'clear_file_name',
+					 required => 1,
 );
-
-#has 'organism_name' => (
-#	documentation =>
-#'exact species of organism, as stored in database, e.g. "Solanum lycopersicum"',
-#	is  => 'rw',
-#	isa => 'Str',
-#);
 
 with 'Bio::Chado::Loader';
 
-#has '+organism_name' => (
-#    required => 1,
-#);
+has '+organism_name' => (
+    required => 1,
+);
 
 has 'organism_id' => (
 		documentation =>
@@ -184,7 +178,17 @@ has 'feature_uniquename_feature_id_cache' => (
 
 use autodie qw(:all);
 use Data::Dumper;
-use 5.010;
+#use 5.010;
+
+sub _usage {
+
+return <<USAGE;
+
+At least one GFF3 file must be given to load.
+
+USAGE
+
+}
 
 =item C<run ()>
 
@@ -885,10 +889,10 @@ sub bulk_delete {
 
 	#check with user
 	my $input;
-	print STDERR "Are you sure you want to delete ".$self->count_feature_ids_uniquenames_gff()." rows (yes/no) :";
+	print STDERR "Are you sure you want to delete ".$self->count_feature_ids_uniquenames_gff()." rows (yes/no) : ";
 	while ($input=<>) {
 		last if ( ( $input eq "yes\n" ) or ( $input eq "no\n" ) );
-		print STDERR "Please enter yes or no ";
+		print STDERR "Please enter yes or no : ";
 	}
 	
 	die "Exiting...." if $input eq "no\n";
