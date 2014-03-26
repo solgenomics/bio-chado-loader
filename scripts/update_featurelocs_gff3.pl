@@ -41,6 +41,26 @@ update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [pas
 use strict;
 use warnings;
 
+#util functions
+sub mem_used {
+	my ( $i, $t );
+	$t = new Proc::ProcessTable;
+	foreach my $got ( @{ $t->table } ) {
+		next if not $got->pid eq $$;
+		$i = $got->size;
+	}
+	print STDERR "Process id=", $$, "\n";
+	print STDERR "Memory used(MB)=", $i / 1024 / 1024, "\n\n";
+}
+
+sub run_time {
+	my ( $user_t, $system_t, $cuser_t, $csystem_t );
+	( $user_t, $system_t, $cuser_t, $csystem_t ) = times;
+	print STDERR "System time for process: $system_t\n";
+	print STDERR "User time for process: $user_t\n\n";
+}
+
+
 use File::Slurp;
 use Try::Tiny;
 use Getopt::Std;
@@ -63,24 +83,43 @@ my $dsn = $opt_s; chomp $dsn;
 my $user = $opt_u; chomp $user;
 my $pass = $opt_p; chomp $pass;
 my $gff_file = $opt_g;
-my $gff      = read_file($gff_file)
-  or die "Could not open GFF file: $gff_file\n";
+die "Could not open GFF file: $gff_file\n" if !(-e $gff_file);
 
 if ($opt_d) {
 	print STDERR "Params parsed..\n";
 }
 
-my $schema= Bio::Chado::Schema->connect($dsn, $user, $pass);
-if (!$schema) { die "No schema is avaiable! \n"; }
+my $loader = Bio::Chado::Loader::GFF3->new(
+       file_name => $gff_file,
+       organism_name => $organism,
+);
 
 if ($opt_d) {
-	$schema->storage->debug(1);# print SQL statements
+	$loader->debug(1);# print SQL statements
+}
+  
+#Create cache first and then parse GFF 
+$loader->db_dsn($dsn);
+$loader->db_user($user);
+$loader->db_pass($pass);
+$loader->organism_id($loader->organism_exists());
+
+#Call populate_cache() before parse() in case parents are not in GFF but in DB already
+$loader->populate__cache();
+$loader->parse();
+if ($opt_d) {
+	run_time(); mem_used();
 }
 
-
-
-
-
+my $cnt;
+$cnt=$loader->prepare_bulk_operation();
+print STDERR 'Prepped '.$cnt." recs for insertion\n";
+$loader->bulk_upload();
+print STDERR "updated locgroups and inserted new rows into featureloc from $gff_file\n";
+$loader->parse();
+if ($opt_d) {
+	run_time(); mem_used();
+}
 
 #----------------------------------------------------------------------------
 
@@ -90,9 +129,9 @@ sub help {
 
     Description:
 
-     The new chromosome backbone has to be loaded into the database using the GMOD bulk loader before new
-     coordinates can be added. The source feature is required to be present before any new featurelocs
-     can be placed on it.
+     The new chromosome backbone has to be loaded into the database using the GMOD bulk loader or 
+     Bio::Chado::Loader::FASTA before new coordinates can be added. The source feature is required 
+     to be present before any new featurelocs can be placed on it.
      
     NOTE:
      Will break if no ID field in attributes in GFF record 
