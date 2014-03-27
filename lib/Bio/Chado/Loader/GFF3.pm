@@ -578,7 +578,7 @@ sub populate__cache {
 		   'organism_id'        => $self->organism_id,
 		   #'feature.uniquename' => { 'like', '%Solyc01g1123%' } #for testing, only 86 floc records
 		   #'feature.uniquename' => { 'like', '%Solyc01g%' }, #50684 floc records
-		   'feature.uniquename' => { 'like', '%Solyc01g0%' }, #?? floc records
+		   'feature.uniquename' => { 'like', '%Solyc%' }, #?? floc records
 		},    
 		#{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only few floc records
 		{ join => ['feature'], prefetch => ['feature'] });
@@ -788,29 +788,38 @@ sub bulk_featureloc_upload {
 	#$self->schema->storage->debug(1);##SQL statement
 	#warn Dumper[keys $self->_feature_ids_uniquenames_gff];
 	my @feature_ids_to_update = keys( $self->_feature_ids_uniquenames_gff );
-	my $fl_rs                 =
-	  $self->schema->resultset('Sequence::Featureloc')
-	  ->search( { 'feature_id' => \@feature_ids_to_update },
-				{ 'order_by' => { -desc => [qw/feature_id locgroup/] } } );
-
-	#create new rows
-	my $create_sql = sub {
+	
+	print STDERR "Total number of features with location updates : ".scalar @feature_ids_to_update ."\n";
+	
+	#update locgroup=locgroup+1
+	my $increment_locgroup_create_sql = sub {
 		my $counter = 0;
-		while ( my ( $feature_id, $feature_uniquename ) =
-				each $self->_feature_ids_uniquenames_gff )
-		{
+		foreach my $feature_id_current (@feature_ids_to_update){
+			my $fl_rs = $self->schema->resultset('Sequence::Featureloc')
+						->search( { 'feature_id' => $feature_id_current},
+						{ 'order_by' => { -desc => [qw/feature_id locgroup/] } } );
+			
+			while ( my $fl_row = $fl_rs->next() ) {
+				$fl_row->set_column('locgroup' => ( $fl_row->get_column('locgroup') + 1 ) );
+				$fl_row->update();
+			}	
+			
+			my $feature_uniquename_current = $self->_feature_ids_uniquenames_gff->{$feature_id_current};
+			
+			print STDERR "\rupdating $feature_uniquename_current";
+			
 			my ( $strand, $phase );
 
-			if ( $self->_features_gff->{$feature_uniquename}->{'strand'} eq '+' )
+			if ( $self->_features_gff->{$feature_uniquename_current}->{'strand'} eq '+' )
 			{$strand = 1;}
-			elsif ($self->_features_gff->{$feature_uniquename}->{'strand'} eq '-' )
+			elsif ($self->_features_gff->{$feature_uniquename_current}->{'strand'} eq '-' )
 			{$strand = -1;}
 			else { $strand = 0; }
 
-			if ( $self->_features_gff->{$feature_uniquename}->{'phase'} ) {
+			if ( $self->_features_gff->{$feature_uniquename_current}->{'phase'} ) {
 				$fl_rs->create(
 					{
-					   'feature_id' => $feature_id,
+					   'feature_id' => $feature_id_current,
 
 						#getting srcfeature_id from _cache which is incorrect if parent was changed
 						#'srcfeature_id' => $self->_cache->{$self->_features_gff->{$feature_uniquename}->{'type'}}
@@ -818,21 +827,21 @@ sub bulk_featureloc_upload {
 		
 						#get feature_id of seq_id from _feature_uniquename_feature_id_cache
 					   'srcfeature_id' =>	 $self->_feature_uniquename_feature_id_cache->{
-										   $self->_features_gff->{$feature_uniquename}->{'seq_id'}
+										   $self->_features_gff->{$feature_uniquename_current}->{'seq_id'}
 										 },
-					   'fmin' => $self->_features_gff->{$feature_uniquename}->{'start'} - 1,
-					   'fmax' => $self->_features_gff->{$feature_uniquename}->{'end'},
+					   'fmin' => $self->_features_gff->{$feature_uniquename_current}->{'start'} - 1,
+					   'fmax' => $self->_features_gff->{$feature_uniquename_current}->{'end'},
 					   'strand' => $strand,
-					   'phase'  => $self->_features_gff->{$feature_uniquename}->{'phase'},
+					   'phase'  => $self->_features_gff->{$feature_uniquename_current}->{'phase'},
 					   'locgroup' => 0,
 					   'rank'     => 0,
 					}
 				);
 			}
-			else {
+			else {#if phase was . in GFF file
 				$fl_rs->create(
 					{
-					   'feature_id' => $feature_id,
+					   'feature_id' => $feature_id_current,
 
 				#getting srcfeature_id from _cache which is incorrect if parent was changed
 				#'srcfeature_id' => $self->_cache->{$self->_features_gff->{$feature_uniquename}->{'type'}}
@@ -840,10 +849,10 @@ sub bulk_featureloc_upload {
 
 				#get feature_id of seq_id from _feature_uniquename_feature_id_cache
 					   'srcfeature_id' => $self->_feature_uniquename_feature_id_cache->{
-										   $self->_features_gff->{$feature_uniquename}->{'seq_id'}
+										   $self->_features_gff->{$feature_uniquename_current}->{'seq_id'}
 										 },
-					   'fmin' => $self->_features_gff->{$feature_uniquename}->{'start'} - 1,
-					   'fmax' => $self->_features_gff->{$feature_uniquename}->{'end'},
+					   'fmin' => $self->_features_gff->{$feature_uniquename_current}->{'start'} - 1,
+					   'fmax' => $self->_features_gff->{$feature_uniquename_current}->{'end'},
 					   'strand'   => $strand,
 					   'locgroup' => 0,
 					   'rank'     => 0,
@@ -851,25 +860,15 @@ sub bulk_featureloc_upload {
 				);
 			}
 			$counter++;
+			if ($counter % 1000 == 0){
+				print STDERR "$counter feature_id's processed\r";
+			}			
 		}
-		print STDERR "$counter rows added to featureloc\n";
-	};
-
-	#update locgroup=locgroup+1
-	my $increment_locgroup_sql = sub {
-		my $counter = 0;
-		while ( my $fl_row = $fl_rs->next() ) {
-			$fl_row->set_column('locgroup' => ( $fl_row->get_column('locgroup') + 1 ) );
-			$fl_row->update();
-			$counter++;
-		}
-		print STDERR "$counter featureloc rows locgroup fields updated\n";
-		$self->schema->txn_do($create_sql);    # nested transaction for create
 	};
 
 	#update locgroups and insert rows into featureloc using transactions
 	try {
-		$self->schema->txn_do($increment_locgroup_sql);
+		$self->schema->txn_do($increment_locgroup_create_sql);
 	  }
 	  catch {# Transaction failed
 		die "Could not increment locgroups and/or create new rows. Error: $!"
@@ -877,7 +876,6 @@ sub bulk_featureloc_upload {
 
 		print STDERR "Error: " . $_;
 	  };
-
 }
 
 =item C<bulk_delete ()>
