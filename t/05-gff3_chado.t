@@ -144,7 +144,9 @@ sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	ok($cnt=$loader->prepare_bulk_operation(), 'loaded data structures and wrote exception file');
 	is($loader->count__feature_ids_uniquenames_gff(),8,'recorded 8 pairs in feature_ids_uniquenames_gff hash');
 	print STDERR 'Prepped '.$cnt." recs for insertion\n";
-	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc');
+	#always throws error even if rows are inserted
+	ok($cnt=$loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc');
+	print STDERR 'Bulk upload returned '.$cnt."\n";
 	run_time(); mem_used();
 }
 
