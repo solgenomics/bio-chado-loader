@@ -116,7 +116,7 @@ $cnt=$loader->prepare_bulk_operation();
 print STDERR 'Prepped '.$cnt." recs for insertion\n";
 
 $loader->bulk_upload();
-print STDERR "updated locgroups and inserted new rows into featureloc from $gff_file\n";
+print STDERR "\nupdated locgroups and inserted new rows into featureloc from $gff_file\n";
 if ($opt_d) {
 	run_time(); mem_used();
 }
