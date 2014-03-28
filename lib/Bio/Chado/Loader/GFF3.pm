@@ -571,6 +571,7 @@ sub populate__cache {
     	This typically happens when the GMOD bulk loader is used to add the 
     	same feature more than once. Exiting..." if $ft_uniquename_err_rs->count() > 0;
 	
+	print STDERR "Populating cache from database.. please be patient\n";
 
 	my $fl_rs = $self->schema->resultset('Sequence::Featureloc')->search(
 		#    	{ 'organism_id'=> $self->organism_id }, #for full DB
