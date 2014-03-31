@@ -144,6 +144,7 @@ has '_cvterms_gff' => (
 	   },
 );
 
+#Not used for updating featureloc. Should be used while creating new features (stored in feature and analysis tables - see FASTA.pm)!!
 has 'is_analysis' => (
 			documentation =>
 			  'set true if this feature should be recorded as from an analysis',
