@@ -21,6 +21,7 @@ update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [pas
  -u  Database user name (required)
  -p  Database user password (required)
  -o  Organism name in quotes e.g. 'Solanum lycopersicum' (required)
+ -r  Delete locations instead of adding
  -d  Debug messages (0 or 1)
  -h  Help
 
@@ -29,9 +30,7 @@ update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [pas
  This script will break if no ID field is present in attributes in GFF record. This 
  may be a problem for non-gene/mRNA/exon/intron records although they may conform to 
  GFF3 standards.
-  
- TODO Add -t option to test script. Compare featurelocs pre and post edit. 
-
+ 
 =head1 AVAILABLITY
 
  https://github.com/solgenomics/bio-chado-loader/blob/master/scripts/update_featurelocs_gff.pl
@@ -66,8 +65,8 @@ use Try::Tiny;
 use Getopt::Std;
 use Bio::Chado::Loader::GFF3;
 
-our ( $opt_g, $opt_s, $opt_u, $opt_p, $opt_o, $opt_d, $opt_h );
-getopts('g:s:u:p:o:d:h');
+our ( $opt_g, $opt_s, $opt_u, $opt_p, $opt_o, $opt_r, $opt_d, $opt_h );
+getopts('g:s:u:p:o:r:d:h');
 if ($opt_h) {
 	help();
 	exit;
@@ -94,6 +93,10 @@ my $loader = Bio::Chado::Loader::GFF3->new(
        organism_name => $organism,
 );
 
+if ($opt_r) {
+	$loader->delete(1);
+}
+
 if ($opt_d) {
 	$loader->debug(1);# print SQL statements
 }
@@ -115,8 +118,16 @@ my $cnt;
 $cnt=$loader->prepare_bulk_operation();
 print STDERR 'Prepped '.$cnt." recs for insertion\n";
 
-$loader->bulk_upload();
-print STDERR "\nupdated locgroups and inserted new rows into featureloc from $gff_file\n";
+if ($opt_r) {
+	$cnt = $loader->bulk_delete();
+	print STDERR 'Deleted '.$cnt." records\n";
+}
+else{
+	$loader->bulk_upload();
+	print STDERR "\n\n\nupdated locgroups and inserted new rows into featureloc from $gff_file\n";
+}
+
+
 if ($opt_d) {
 	run_time(); mem_used();
 }
@@ -146,6 +157,7 @@ sub help {
  -u  Database user name (required)
  -p  Database user password (required)
  -o  Organism name in quotes e.g. 'Solanum lycopersicum' (required)
+ -r  Delete locations instead of adding
  -d  Debug messages (0 or 1)
  -h  Help
 
