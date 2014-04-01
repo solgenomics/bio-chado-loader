@@ -1003,6 +1003,9 @@ sub bulk_featureloc_delete {
 				print STDERR "Error: " . $_;
 			  };
 			  $counter++;
+			  if ( $counter % 100 == 0 ) {
+				print STDERR "\rprocessing $counter feature";
+			  }
 	}
 	return $counter;
 }
