@@ -103,6 +103,7 @@ sub TEST_DB_CACHE_UNKNOWN_PARENT : Test(8){
 #	ok($loader->bulk_upload(),'updated locgroups and inserted new rows into featureloc')
 #}
 
+#long runtime as cache is built from entire feature set for tomato
 sub TEST_DB_INSERT_Solyc01g112300 : Tests{
 	my $loader = Bio::Chado::Loader::GFF3->new(
         file_name => "t/data/Solyc01g112300.2.gff3",
