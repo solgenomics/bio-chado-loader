@@ -30,7 +30,7 @@ format_feature_gff.pl
 
  This script *only* fixes the following
      1. feature.uniquenames with auto for polypeptide features.
-     2. feature.uniquenames with feature_id suffix for gene,mRNA,exon,intron features.
+     2. feature.uniquenames with feature_id suffix for gene,mRNA,exon,intron,ultracontig features.
      
      bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your 
      GFF file.
@@ -112,8 +112,8 @@ if ($opt_d) {
 }
 	  
 
-#fix name-feature_id for 'gene','mRNA','exon','intron'
-my $name_condition = "in ('gene','mRNA','exon','intron')";
+#fix name-feature_id for 'gene','mRNA','exon','intron','ultracontig'
+my $name_condition = "in ('gene','mRNA','exon','intron','ultracontig')";
 my @cv_rs_arr = $schema->resultset('Cv::Cvterm')->search(
 {'name' => \$name_condition},
 {'columns' => [qw/cvterm_id/]}
@@ -132,7 +132,7 @@ my $ft_uniquename_rs = $schema->resultset('Sequence::Feature')->search(
 									   'type_id'     => \@type_ids,
 									 },);
 
-#update 'gene','mRNA','exon','intron' uniquenames
+#update 'gene','mRNA','exon','intron','ultracontig' uniquenames
 my $update_malformed_uniquename_sql = sub {
 	my $counter = 0;
 	while ( my $ft_row = $ft_uniquename_rs->next() ) {
@@ -146,19 +146,19 @@ my $update_malformed_uniquename_sql = sub {
 		
 		if ($counter % 1000 == 0){ print STDERR "Processing $counter\r";}
 	}
-	print STDERR "$counter feature.uniquename's updated for gene,mRNA,exon,intron records\n\n\n";
+	print STDERR "$counter feature.uniquename's updated for gene,mRNA,exon,intron,ultracontig records\n\n\n";
 };
 
 try {
 	$schema->txn_do($update_malformed_uniquename_sql);
 	}
 	catch {# Transaction failed
-		die "Could not update feature.uniquename for gene,mRNA,exon,intron records. Error: $!"
+		die "Could not update feature.uniquename for gene,mRNA,exon,intron,ultracontig records. Error: $!"
 		if ( $_ =~ /Rollback failed/ );
 		print STDERR "Error: " . $_;
 	  };
 if ($opt_d) {
-	print STDERR "feature.uniquename rows updated for gene,mRNA,exon,intron records..\n";
+	print STDERR "feature.uniquename rows updated for gene,mRNA,exon,intron,ultracontig records..\n";
 }
 
 
@@ -180,7 +180,7 @@ sub help {
     NOTE:
      This script *only* fixes the following
      1. feature.uniquenames with auto for polypeptide features.
-     2. feature.uniquenames with feature_id suffix for gene,mRNA,exon,intron features.
+     2. feature.uniquenames with feature_id suffix for gene,mRNA,exon,intron,ultracontig features.
      
      bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your 
      GFF file. 
