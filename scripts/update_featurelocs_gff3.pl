@@ -27,6 +27,9 @@ update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [pas
 
 =head1 CAVEATS
 
+ It is hard coded for tomato genes to avoid reading irrelevant features from DB into cache.
+ It reads only Solyc genes ('feature.uniquename' => { 'like', '%Solyc%' }, SEE Bio::Chado::Loader::GFF:populate__cache())
+
  This script will break if no ID field is present in attributes in GFF record. This 
  may be a problem for non-gene/mRNA/exon/intron records although they may conform to 
  GFF3 standards.
