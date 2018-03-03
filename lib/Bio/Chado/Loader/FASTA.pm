@@ -269,7 +269,7 @@ sub _find_or_create_feature {
 
     if( $feature ) {
         print "Adding sequence to existing feature $id\n";
-        #print "Found $defline and updating\n";
+        print "Found $defline and updating\n";
         $feature->set_columns({
             seqlen      => $seqlen,
             md5checksum => md5_hex( $$seq ),
