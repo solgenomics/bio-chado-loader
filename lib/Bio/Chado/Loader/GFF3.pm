@@ -530,7 +530,11 @@ Populate _cache hash with type_id->feature.uniquename->feature.feature_id,featur
 featureloc.locgroup,featureloc.rank,cvterm.name from cvterm,feature,featureloc relations. Call 
 function before parse() in case parents are not in GFF but in DB already.  
 
-CAVEAT: Count may be over estimation if some features have multiple locgroups(e.g. contigs).
+CAVEAT: 
+Count may be over estimation if some features have multiple locgroups(e.g. contigs).
+Hard coded for tomato to avoid reading irrelevant features from DB into cache.
+It reads only Solyc genes ('feature.uniquename' => { 'like', '%Solyc%' })
+
 
 =cut
 
@@ -553,24 +557,38 @@ sub populate__cache {
 									 },
 									 { join => ['type'], prefetch => ['type'] });
 
-	die "There are features in database with auto in feature.uniquename field. 
-    	Please correct this in your database before running this script.
-    	Use format_feature_names.pl in scripts dir to change the names.
-    	This typically happens when the GMOD bulk loader is used to add the 
-    	same feature more than once. Exiting..." if $ft_auto_err_rs->count() > 0;
+	die "There are 'gene','mRNA','exon','intron' features in database 
+		with auto in feature.uniquename field. Please correct this in 
+		your database before running this script. Use format_feature_names.pl 
+		in scripts dir to change the names. This typically happens when 
+		the GMOD bulk loader is used to add the same feature more than 
+		once. Exiting..." if $ft_auto_err_rs->count() > 0;
     
+    #get type_id/cvterm_id for 'gene','mRNA','exon','intron'
+	my $name_condition = "in ('gene','mRNA','exon','intron')";
+	my @cv_rs_arr = $self->schema->resultset('Cv::Cvterm')->search(
+	{'name' => \$name_condition},
+	{'columns' => [qw/cvterm_id/]}
+	)->all();
+	
+	my @type_ids;
+	foreach my $cv_rs (@cv_rs_arr){
+		push @type_ids, $cv_rs->cvterm_id();
+	} 
+    #checks for any feature from organism with uniquename = "name-feature_id" 
     my $uniquename_condition = "like \'%-\'||feature_id";
     my $ft_uniquename_err_rs = $self->schema->resultset('Sequence::Feature')->search(
 									 {
 									   'me.organism_id' => $self->organism_id,
 									   'me.uniquename'  => \$uniquename_condition,
+									   'type_id'     => \@type_ids,
 									 },);
 
-	die "There are features in database with feature_id in feature.uniquename field. 
-    	Please correct this in your database before running this script.
-    	Use format_feature_names.pl in scripts dir to change the names.
-    	This typically happens when the GMOD bulk loader is used to add the 
-    	same feature more than once. Exiting..." if $ft_uniquename_err_rs->count() > 0;
+	die "There are 'gene','mRNA','exon','intron' features in database with 
+		feature_id in feature.uniquename field. Please correct this in 
+		your database before running this script. Use format_feature_names.pl 
+		in scripts dir to change the names. This typically happens when the 
+		GMOD bulk loader is used to add the	same feature more than once. Exiting..." if $ft_uniquename_err_rs->count() > 0;
 	
 	print STDERR "Populating cache from database.. please be patient\n";
 
@@ -580,7 +598,8 @@ sub populate__cache {
 		   'organism_id'        => $self->organism_id,
 		   #'feature.uniquename' => { 'like', '%Solyc01g1123%' } #for testing, only 86 floc records
 		   #'feature.uniquename' => { 'like', '%Solyc01g%' }, #50684 floc records
-		   'feature.uniquename' => { 'like', '%Solyc%' }, #?? floc records
+		   #'feature.uniquename' => { 'like', '%Solyc%' }, #all floc records
+		   'feature.uniquename' => { 'like', '%PGSC%' }, #potato floc records
 		},    
 		#{ 'organism_id'=> $self->organism_id , 'feature.uniquename' => { 'like', '%dummy%'}},#for testing, only few floc records
 		{ join => ['feature'], prefetch => ['feature'] });
@@ -698,10 +717,14 @@ sub prepare_bulk_operation {
 	#warn Dumper [ $self->_feature_uniquename_feature_id_cache ];
 	while ( ( $feature_uniquename, $fields ) = each %{ $self->_features_gff } ) {
 
-		#if feature and seq_id/scrfeature in _cache, try _feature_uniquename_feature_id_cache_exists??
-		if (( $self->_cache->{ $fields->{'type'} }->{$feature_uniquename} )
-			 && ( $self->_feature_uniquename_feature_id_cache
-				  ->{ $fields->{'seq_id'} } ) )
+		#if feature and seq_id/src_feature in _cache
+		#try _feature_uniquename_feature_id_cache_exists??
+		#breaks if new location of feature is on a diff chr (seq_id/src_feature)  
+#		if (( $self->_cache->{ $fields->{'type'} }->{$feature_uniquename} )
+#			 && ( $self->_feature_uniquename_feature_id_cache
+#				  ->{ $fields->{'seq_id'} } ) )
+		#if feature in _cache
+		if ( $self->_cache->{ $fields->{'type'} }->{$feature_uniquename})
 		{
 
 			#record feature_ids in class var
@@ -726,7 +749,7 @@ sub prepare_bulk_operation {
 
 	if ( $counters{'exceptions'} > 0 ) {
 		my ($exception_gff_fh);
-		open( $exception_gff_fh, ">", $self->file_name . 'exceptions' )
+		open( $exception_gff_fh, ">", $self->file_name . '.exceptions' )
 		  or die("Could not create exception gff file: $!");
 		print $exception_gff_fh $disk_exception_str;
 		close($exception_gff_fh);
