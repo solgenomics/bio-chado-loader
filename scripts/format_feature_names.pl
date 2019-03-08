@@ -2,20 +2,20 @@
 
 =head1 NAME
 
-format_feature_gff.pl
+format_feature_names.pl
 
 =head1 SYNOPSIS
 
  format_feature_names.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [password]
 
-=head1 DESCRIPTION 
+=head1 DESCRIPTION
 
- This script corrects feature names if they are formatted like auto<feature_id> or <name>-<feature_id>. 
+ This script corrects feature names if they are formatted like auto<feature_id> or <name>-<feature_id>.
      This typically happens when the GMOD bulk loader is used to add the same feature more than once.
-     You need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID 
-     tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers 
+     You need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID
+     tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers
      need to be correctly formatted for the comparison to work.
- 
+
 
 =head2 ARGUMENTS
 
@@ -31,11 +31,11 @@ format_feature_gff.pl
  This script *only* fixes the following
      1. feature.uniquenames with auto for polypeptide features.
      2. feature.uniquenames with feature_id suffix for gene,mRNA,exon,intron,ultracontig features.
-     
-     bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your 
+
+     bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your
      GFF file.
-     
- TODO Add -t option to test script. Compare uniquename pre and post fix. 
+
+ TODO Add -t option to test script. Compare uniquename pre and post fix.
 
 =head1 AVAILABLITY
 
@@ -82,10 +82,15 @@ my $organism_id = $schema->resultset('Organism::Organism')->search(
 							{'me.species' => $organism},
 							)->single->organism_id();
 
+# get cvterm for polypeptide
+my $type_id = $schema->resultset('Cv::Cvterm')->search(
+							{'me.name' => 'polypeptide'},
+							)->single->cvterm_id();
+
 # auto, polypeptides
 my $ft_polypeptide_rs =  $schema->resultset('Sequence::Feature')
 	  ->search( { 'organism_id' => $organism_id,
-	  			  'type_id' => 22027,
+	  			  'type_id' => $type_id,
 	  			  'uniquename' => {'like','auto%'}	},);
 
 #update polypeptide uniquenames
@@ -110,7 +115,7 @@ try {
 if ($opt_d) {
 	print STDERR "feature.uniquename rows updated for polypeptide records..\n";
 }
-	  
+
 
 #fix name-feature_id for 'gene','mRNA','exon','intron','ultracontig'
 my $name_condition = "in ('gene','mRNA','exon','intron','ultracontig')";
@@ -122,7 +127,7 @@ my @cv_rs_arr = $schema->resultset('Cv::Cvterm')->search(
 my @type_ids;
 foreach my $cv_rs (@cv_rs_arr){
 	push @type_ids, $cv_rs->cvterm_id();
-} 
+}
 
 my $uniquename_condition = "like \'%-\'||feature_id";
 my $ft_uniquename_rs = $schema->resultset('Sequence::Feature')->search(
@@ -143,7 +148,7 @@ my $update_malformed_uniquename_sql = sub {
 		$ft_row->set_column('uniquename' => $uniquename);
 		$ft_row->update();
 		$counter++;
-		
+
 		if ($counter % 1000 == 0){ print STDERR "Processing $counter\r";}
 	}
 	print STDERR "$counter feature.uniquename's updated for gene,mRNA,exon,intron,ultracontig records\n\n\n";
@@ -171,24 +176,24 @@ sub help {
 
     Description:
 
-     This script corrects feature names if they are formatted like auto<feature_id> or <name>-<feature_id>. 
+     This script corrects feature names if they are formatted like auto<feature_id> or <name>-<feature_id>.
      This typically happens when the GMOD bulk loader is used to add the same feature more than once.
-     You need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID 
-     tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers 
+     You need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID
+     tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers
      need to be correctly formatted for the comparison to work.
-    
+
     NOTE:
      This script *only* fixes the following
      1. feature.uniquenames with auto for polypeptide features.
      2. feature.uniquenames with feature_id suffix for gene,mRNA,exon,intron,ultracontig features.
-     
-     bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your 
-     GFF file. 
-     
+
+     bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your
+     GFF file.
+
 
     Usage:
       format_feature_names.pl -o ["organism"] -s [DSN string] -u [DB user] -p [password]
-      
+
     Flags:
 
  -s  Database connection string e.g. "dbi:Pg:dbname=ss_cxgn_uploadtest\;host=localhost\;port=5432" (required)
