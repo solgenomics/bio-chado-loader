@@ -12,6 +12,7 @@ format_polypeptide_names.pl
 
  This script corrects polypeptide feature names and uniquenames when they are formatted like auto<feature_id> by the CHADO bulk loader. It get the name of the mRNA the polypeptide it derived from and uses it for the name and uniquename of the polypeptide record.
  You will need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers need to be correctly formatted for the comparison to work.
+ Sometimes the blk loader creates more than one polypeptide for one mRNA feature. This script only fixes the first one. You should delete the remaining auto named features manually (delete from feature where type_id = 75820 and uniquename like 'auto%';)
 
 
 =head2 ARGUMENTS
@@ -87,8 +88,10 @@ my $ft_polypeptide_rs =  $schema->resultset('Sequence::Feature')
 	  			  'type_id' => $type_id,
 	  			  'uniquename' => {'like','auto%'}	},);
 
-#get names for mRNA for selected polypeptides and store in hash
+#get names for mRNA for selected polypeptides and store in hash, also a hash for fixed polypeptides
 my %polypeptide_uniquename_mrna_name_hash;
+my %mrna_fix_count_hash;
+
 while ( my $ft_polypeptide_row =  ($ft_polypeptide_rs->next ) ) {
 	#find the parent mRNA feature, mRNA is the object, the protein is the subject in feature_relationship
 	#the protein *should* have one parent object, which is the mRNA. Can add more checks in case the protein has more than one parent object feature
@@ -96,19 +99,37 @@ while ( my $ft_polypeptide_row =  ($ft_polypeptide_rs->next ) ) {
 	#print STDERR "class of \$ft_mrna_row: ",ref($ft_mrna_row),"\n";
 
 	my $ft_mrna_row_name = $ft_mrna_row->name();
-	$polypeptide_uniquename_mrna_name_hash{$ft_polypeptide_row->get_column('uniquename')} = $ft_mrna_row_name;
+	$polypeptide_uniquename_mrna_name_hash{$ft_polypeptide_row->uniquename()} = $ft_mrna_row_name;
+	$mrna_fix_count_hash{$ft_mrna_row_name} = 0;
 }
+
+# print STDERR "Values in polypeptide_uniquename_mrna_name_hash: ".length(keys %polypeptide_uniquename_mrna_name_hash)."\n";
+# print STDERR "Values in mrna_fix_count_hash: ".length(keys %mrna_fix_count_hash)."\n";
 
 #update polypeptide name and uniquenames
 $ft_polypeptide_rs->reset(); #reset counter to top
 my $update_polypeptide_name_uniquename_sql = sub {
 	my $counter = 0;
-	while ( my $ft_row = $ft_polypeptide_rs->next() ) {
-		$ft_row->set_column('name' => $polypeptide_uniquename_mrna_name_hash{ $ft_row->get_column('uniquename' ) } );
-		$ft_row->set_column('uniquename' => ( 'polypeptide:'.$polypeptide_uniquename_mrna_name_hash{$ft_row->get_column('uniquename') } ) );
-		$ft_row->update();
-		$counter++;
+	my $multipopypeptides_counter = 0;
+	while ( my $ft_polypeptide_row = $ft_polypeptide_rs->next() ) {
+		#some polypeptides are derived from same mRNA so checking if the polypeptide for this mRNA has already been fixed
+		#the remaining auto polypeptides for this organism can be safely deleted since they have same coords in featureloc
+		#print STDERR "polypep uniqname before fix: ".$polypeptide_uniquename_mrna_name_hash{$ft_polypeptide_row->uniquename()}."\n";
+		if ( $mrna_fix_count_hash{$polypeptide_uniquename_mrna_name_hash{$ft_polypeptide_row->uniquename()}} == 0 )
+		{
+			#print STDERR "polypep uniqname during fix: ".$polypeptide_uniquename_mrna_name_hash{$ft_polypeptide_row->uniquename()}."\n";
+			#print STDERR "mRNA name during fix: ".$mrna_fix_count_hash{$polypeptide_uniquename_mrna_name_hash{$ft_polypeptide_row->uniquename()}}."\n";
+			$mrna_fix_count_hash{ $polypeptide_uniquename_mrna_name_hash{ $ft_polypeptide_row->uniquename() } }++;
+			$ft_polypeptide_row->set_column('name' => $polypeptide_uniquename_mrna_name_hash{ $ft_polypeptide_row->uniquename() } );
+			$ft_polypeptide_row->set_column('uniquename' => ( 'polypeptide:'.$polypeptide_uniquename_mrna_name_hash{$ft_polypeptide_row->uniquename() } ) );
+			$ft_polypeptide_row->update();
+			$counter++;
+		}
+		else{
+			$multipopypeptides_counter++;
+		}
 	}
+	print STDERR "$multipopypeptides_counter mRNAs have more than 1 polypeptide. Please check and delete them in the feature and featureloc tables\n";
 	print STDERR "$counter feature.name and uniquename rows updated for polypeptide records\n\n\n";
 };
 
@@ -133,23 +154,13 @@ sub help {
 
     Description:
 
-     This script corrects feature names if they are formatted like auto<feature_id> or <name>-<feature_id>.
-     This typically happens when the GMOD bulk loader is used to add the same feature more than once.
-     You need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID
-     tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers
-     need to be correctly formatted for the comparison to work.
-
-    NOTE:
-     This script *only* fixes the following
-     1. feature.uniquenames with auto for polypeptide features.
-     2. feature.uniquenames with feature_id suffix for gene,mRNA,exon,intron,ultracontig features.
-
-     bio-chado-loader-gff may still fail if other features in CHADO have malformed uniquenames compared to your
-     GFF file.
+     This script corrects polypeptide feature names and uniquenames when they are formatted like auto<feature_id> by the CHADO bulk loader. It get the name of the mRNA the polypeptide it derived from and uses it for the name and uniquename of the polypeptide record.
+	 You will need to run this script since bio-chado-loader-gff updates featurelocs by comparing names from ID tag of attribute field from the GFF file and feature.uniquename from the CHADO database. Both identifiers need to be correctly formatted for the comparison to work.
+	 Sometimes the blk loader creates more than one polypeptide for one mRNA feature. This script only fixes the first one. You should delete the remaining auto named features manually (delete from feature where type_id = 75820 and uniquename like 'auto%';)
 
 
     Usage:
-      format_feature_names.pl -o ["organism"] -s [DSN string] -u [DB user] -p [password]
+      format_polypeptide_names.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [password]
 
     Flags:
 
@@ -171,7 +182,7 @@ EOF
 =head1 AUTHOR
 
   Surya Saha <suryasaha@cornell.edu , @SahaSurya>
-	Naama Menda <nm249@cornell.edu>
+  Naama Menda <nm249@cornell.edu>
 
 =cut
 
