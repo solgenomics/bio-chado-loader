@@ -10,7 +10,7 @@ update_featurelocs_gff.pl -o ["organism"] -s ["DSN string"] -u [DB user] -p [pas
 
 =head1 DESCRIPTION
 
- The new chromosome backbone has to be loaded into the database using the GMOD bulk loader before new
+ This script inserts new locations for a gene into featurelocs table in CHADO. The new chromosome backbone has to be loaded into the database using the GMOD bulk loader before new
      coordinates can be added. The source feature is required to be present before any new featurelocs
      can be placed on it.
 
@@ -143,6 +143,7 @@ sub help {
 
     Description:
 
+     This script inserts new locations for a gene into featurelocs table in CHADO.
      The new chromosome backbone has to be loaded into the database using the GMOD bulk loader or 
      Bio::Chado::Loader::FASTA before new coordinates can be added. The source feature is required 
      to be present before any new featurelocs can be placed on it.
